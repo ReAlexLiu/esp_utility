@@ -43,12 +43,16 @@ public:                                                     \
     void destory();
 #endif
 
-#define Print(fmt, ...) Serial.printf("[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+#define Print(fmt, ...) Serial.printf("[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__)
+#define Println(fmt, ...) Serial.printf("[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 #ifndef MAX_PATH
 #define MAX_PATH 260
 #endif
 
 #define GLOBAL_CFG_VERSION 1
+
+#define ONE_WIRE_BUS 2
+#define TEMPERATURE_PRECISION 9
 
 #endif  // ESP_UTILITY_PRECOMPILED_H

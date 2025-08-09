@@ -10,13 +10,11 @@
 #ifndef ESP_UTILITY_CONFIG_H
 #define ESP_UTILITY_CONFIG_H
 
-#include "../../../include/config.pb.h"
+#include "config.pb.h"
 #include "precompiled.h"
 
-#include <pb.h>
-#include <pb_decode.h>
-#include <pb_encode.h>
-
+namespace esp_utility
+{
 class config
 {
     SINGLE_TPL(config)
@@ -36,4 +34,5 @@ private:
     uint16_t _crc;
 };
 
+}  // namespace esp_utility
 #endif  // ESP_UTILITY_CONFIG_H

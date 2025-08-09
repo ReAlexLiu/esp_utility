@@ -8,16 +8,22 @@
  */
 #include "config.h"
 
+#include <pb.h>
+#include <pb_decode.h>
+#include <pb_encode.h>
+
 #include <c_types.h>
 #include <spi_flash.h>
 
+extern uint32_t _EEPROM_start;  // See EEPROM.cpp
+#define EEPROM_PHYS_ADDR ((uint32_t)(&_EEPROM_start) - 0x40200000)
+
+namespace esp_utility
+{
 const uint16_t crcTalbe[] = {
     0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
     0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400
 };
-
-extern uint32_t _EEPROM_start;  // See EEPROM.cpp
-#define EEPROM_PHYS_ADDR ((uint32_t)(&_EEPROM_start) - 0x40200000)
 
 void config::create()
 {
@@ -33,7 +39,7 @@ bool config::load()
     SpiFlashOpResult ret    = spi_flash_read(EEPROM_PHYS_ADDR, (uint32*)buf, 6);
     if (SPI_FLASH_RESULT_OK != ret)
     {
-        Print("Failed to read EEPROM, return value: %d", ret);
+        Println("Failed to read EEPROM, return value: %d", ret);
         return false;
     }
 
@@ -42,24 +48,26 @@ bool config::load()
     if (cfg != GLOBAL_CFG_VERSION)
     {
         reset();
-        Print("Configuration file version mismatch");
+        Println("Configuration file version mismatch");
         return false;
     }
 
     uint16 len = (buf[2] << 8 | buf[3]);
     _crc       = (buf[4] << 8 | buf[5]);
 
+  //  Println("read len: %d crc: %d", len, _crc);
     if (len > ConfigMessage_size)
     {
         len = ConfigMessage_size;
     }
 
+  //  Println("read len: %d crc: %d", len, _crc);
     uint8_t* data = (uint8_t*)malloc(len);
     ret           = spi_flash_read(EEPROM_PHYS_ADDR + 6, (uint32*)data, len);
     if (SPI_FLASH_RESULT_OK != ret)
     {
         free(data);
-        Print("Failed to read EEPROM, return value: %d", ret);
+        Println("Failed to read EEPROM, return value: %d", ret);
         return false;
     }
 
@@ -68,7 +76,7 @@ bool config::load()
     {
         reset();
         free(data);
-        Print("Data verification failed");
+        Println("Data verification failed");
         return false;
     }
 
@@ -79,12 +87,13 @@ bool config::load()
     {
         reset();
         free(data);
-        Print("Failed to serialize data");
+        Println("Failed to serialize data");
         return false;
     }
 
     free(data);
-    Print("read len: %d crc: %d", len, _crc);
+
+ //   Println("read len: %d crc: %d", len, _crc);
     return true;
 }
 
@@ -95,31 +104,30 @@ bool config::save()
     bool         status = pb_encode(&stream, ConfigMessage_fields, &_config);
     if (!status)
     {
-        Print("save config failed");
+        Println("save config failed");
         return false;
     }
 
     size_t   len = stream.bytes_written;
     uint16_t crc = crc16(buffer, len);
+    Println("save len: %d crc: %d", len, crc);
     if (crc == _crc)
     {
-        Print("check config same data");
+        Println("check config same data");
         return true;
     }
 
     _crc          = crc;
 
-    // 读取原来数据
     uint8_t* data = (uint8_t*)malloc(SPI_FLASH_SEC_SIZE);
     int      ret  = spi_flash_read(EEPROM_PHYS_ADDR, (uint32*)data, SPI_FLASH_SEC_SIZE);
     if (SPI_FLASH_RESULT_OK != ret)
     {
         free(data);
-        Print("Read EEPROM Data Error");
+        Println("Read EEPROM Data Error");
         return false;
     }
 
-    // 拷贝数据
     data[0] = GLOBAL_CFG_VERSION >> 8;
     data[1] = GLOBAL_CFG_VERSION;
 
@@ -131,7 +139,6 @@ bool config::save()
 
     memcpy(&data[6], buffer, len);
 
-    // 擦写扇区
     ret = spi_flash_erase_sector(EEPROM_PHYS_ADDR / SPI_FLASH_SEC_SIZE);
     if (SPI_FLASH_RESULT_OK != ret)
     {
@@ -140,23 +147,22 @@ bool config::save()
         return false;
     }
 
-    // 写入数据
     ret = spi_flash_write(EEPROM_PHYS_ADDR, (uint32*)data, SPI_FLASH_SEC_SIZE);
     if (SPI_FLASH_RESULT_OK != ret)
     {
         free(data);
-        Print("Write EEPROM Data Error");
+        Println("Write EEPROM Data Error");
         return false;
     }
     free(data);
 
-    Print("save config len: %d crc: %d", len, _crc);
+    Println("save config len: %d crc: %d", len, _crc);
     return true;
 }
 
 bool config::reset()
 {
-    Print("reset config");
+    Println("reset config");
     memset(&_config, 0, sizeof(ConfigMessage));
     return save();
 }
@@ -171,3 +177,4 @@ uint16_t config::crc16(uint8_t* ptr, uint16_t len)
     }
     return crc;
 }
+}  // namespace esp_utility
