@@ -1,11 +1,11 @@
 /*
-* @Description:
-* @Author: l2q
-* @Date: 2025/08/06 23:13
-* @LastEditors: l2q
-* @LastEditTime: 2025/08/06 23:13
-*
-*/
+ * @Description:
+ * @Author: l2q
+ * @Date: 2025/08/06 23:13
+ * @LastEditors: l2q
+ * @LastEditTime: 2025/08/06 23:13
+ *
+ */
 
 #ifndef RESOURCE_H
 #define RESOURCE_H
@@ -14,11 +14,11 @@
 namespace esp_utility
 {
 const char index_html[] PROGMEM =
-R"rawliteral(
+    R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ESP8266 综合控制中心</title>
+    <title>控制中心</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -106,7 +106,9 @@ R"rawliteral(
                     <div class="tab-button px-6 py-4 text-gray-700" data-tab="ota">OTA更新</div>
                 </div>
             </div>
-
+)rawliteral"
+#ifdef ENABLE_WIFI
+    R"rawliteral(
             <!-- WiFi配置标签内容 -->
             <div id="wifi-content" class="tab-content active p-6">
                 <div class="flex justify-between items-center mb-6">
@@ -214,7 +216,11 @@ R"rawliteral(
                     </div>
                 </div>
             </div>
+)rawliteral"
+#endif  // ENABLE_WIFI
 
+#ifdef ENABLE_DS18B20
+    R"rawliteral(
             <!-- DS18B20配置标签内容 -->
             <div id="ds18b20-content" class="tab-content p-6">
                 <div class="flex justify-between items-center mb-6">
@@ -389,7 +395,11 @@ R"rawliteral(
                     <p id="save-progress-text" class="text-xs text-gray-500 mt-1">保存中...</p>
                 </div>
             </div>
+)rawliteral"
+#endif  // ENABLE_DS18B20
 
+#ifdef ENABLE_FAN
+    R"rawliteral(
             <!-- 风扇配置标签内容 -->
             <div id="fan-content" class="tab-content p-6">
                 <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">风扇速度控制器</h1>
@@ -471,7 +481,11 @@ R"rawliteral(
                 <!-- 状态信息 -->
                 <div id="fan-status" class="mt-6 p-3 rounded-md hidden"></div>
             </div>
+)rawliteral"
+#endif  // ENABLE_FAN
 
+#ifdef ENABLE_OTA
+    R"rawliteral(
             <!-- OTA更新标签内容 -->
             <div id="ota-content" class="tab-content p-6">
                 <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">风扇控制器 OTA 更新</h1>
@@ -521,6 +535,9 @@ R"rawliteral(
                 <!-- 状态信息 -->
                 <div id="ota-status" class="mt-4 p-3 rounded-md hidden"></div>
             </div>
+)rawliteral"
+#endif
+    R"rawliteral(
         </div>
     </div>
 
@@ -596,7 +613,9 @@ R"rawliteral(
                 }, 3000);
             }
         }
-
+)rawliteral"
+#ifdef ENABLE_WIFI
+    R"rawliteral(
         // WiFi配置页面功能
         function initWifiPage() {
             // 存储扫描到的网络
@@ -942,7 +961,11 @@ R"rawliteral(
             // 设置定时器定期获取设备信息
             timers.wifi = setInterval(fetchDeviceInfo, 10000);
         }
+)rawliteral"
+#endif  // ENABLE_WIFI
 
+#ifdef ENABLE_DS18B20
+    R"rawliteral(
         // DS18B20配置页面功能
         function initDs18b20Page() {
             // 获取传感器配置信息
@@ -1074,7 +1097,11 @@ R"rawliteral(
             // 设置定时器定期刷新数据
             timers.ds18b20 = setInterval(fetchSensorData, 5000);
         }
+)rawliteral"
+#endif  // ENABLE_DS18B20
 
+#ifdef ENABLE_FAN
+    R"rawliteral(
         // 风扇配置页面功能
         function initFanPage() {
             // 获取DOM元素
@@ -1249,7 +1276,11 @@ R"rawliteral(
             // 设置定时器定期获取状态
             timers.fan = setInterval(fetchFanStates, 5000);
         }
+)rawliteral"
+#endif  // ENABLE_FAN
 
+#ifdef ENABLE_OTA
+    R"rawliteral(
         // OTA更新页面功能
         function initOtaPage() {
             // 获取存储信息
@@ -1344,6 +1375,9 @@ R"rawliteral(
             timers.ota = setInterval(fetchStorageInfo, 10000);
         }
 
+)rawliteral"
+#endif  // ENABLE_OTA
+    R"rawliteral(
         // 初始化默认页面
         document.addEventListener('DOMContentLoaded', () => {
             initWifiPage();
@@ -1353,4 +1387,4 @@ R"rawliteral(
 </html>
 )rawliteral";
 }
-#endif // RESOURCE_H
+#endif  // RESOURCE_H

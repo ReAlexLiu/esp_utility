@@ -1,5 +1,6 @@
 #ifndef ESP_UTILITY_WIFI_CONFIG_H
 #define ESP_UTILITY_WIFI_CONFIG_H
+#ifdef ENABLE_WIFI
 #include "ElapsedTimer.h"
 #include "precompiled.h"
 
@@ -39,4 +40,5 @@ private:
     std::vector<wifi_scan_result> _scan_results;
 };
 }
+#endif // ENABLE_WIFI
 #endif  // ESP_UTILITY_WIFI_CONFIG_H

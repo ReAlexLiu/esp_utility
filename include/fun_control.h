@@ -9,6 +9,7 @@
 
 #ifndef ESP_UTILITY_FUN_CONTROL_H
 #define ESP_UTILITY_FUN_CONTROL_H
+#ifdef ENABLE_FAN
 #include "ElapsedTimer.h"
 #include "precompiled.h"
 
@@ -31,10 +32,14 @@ public:
     void update();
 
 private:
+    int adjust_speed(float current_temp);
+
+private:
     int          _fan_pins[4]            = { PWM_MOTOR1, PWM_MOTOR2, PWM_MOTOR3, PWM_MOTOR4 };
     int          _fan_speeds[4]          = { 0, 0, 0, 0 };
     bool         _remote_control_enabled = false;
     ElapsedTimer _update_timer;
 };
 }
+#endif // ENABLE_FAN
 #endif  // ESP_UTILITY_FUN_CONTROL_H

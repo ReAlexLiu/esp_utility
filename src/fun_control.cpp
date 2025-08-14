@@ -1,5 +1,6 @@
 #include "fun_control.h"
 
+#ifdef ENABLE_FAN
 #include "ds18B20.h"
 
 #include <ArduinoJson.h>
@@ -9,7 +10,7 @@
 
 namespace esp_utility
 {
-void       fun_control::create()
+void fun_control::create()
 {
     _remote_control_enabled = false;
 }
@@ -18,52 +19,49 @@ void fun_control::destory()
 {
 }
 
-/* PWM码表
-    30	0%
-    35	20%
-    40	26%
-    45	32%
-    50	40%
-    55	60%
-    60	80%
-    65	100%
-*/
-int get_pwm_value(float temperature)
+int fun_control::adjust_speed(float current_temp)
 {
-    if (temperature <= 30.0)
+    int speed_percent = 0;
+
+    // 30~45度范围，转速5%~30%，每2度调整一次
+    if (current_temp < 30.0)
     {
-        return 0;
+        speed_percent = std::max(0, static_cast<int>(5 - (30 - current_temp)));
     }
-    else if (temperature <= 35.0)
+    else if (current_temp >= 30.0 && current_temp < 46.0)
     {
-        return 20;
+        // 计算与基准温度(30度)的差值
+        int diff      = current_temp - 30;
+        // 计算调整步数（每2度一步）
+        int steps     = diff / 2;
+        // 总步数：(45-30)/2 = 7步（30到44度），45度单独处理
+        int max_steps = (45 - 30) / 2;
+        // 转速范围（30% - 5%）
+        int range     = 30 - 5;
+
+        // 计算转速百分比
+        speed_percent = 5 + (steps * range) / max_steps;
     }
-    else if (temperature <= 40.0)
+    else if (current_temp >= 46.0 && current_temp < 60.0)
     {
-        return 26;
+        // 计算与基准温度(46度)的差值
+        int diff      = current_temp - 46;
+        // 计算调整步数（每2度一步）
+        int steps     = diff / 2;
+        // 总步数：(60-46)/2 = 7步（46到58度），60度单独处理
+        int max_steps = (60 - 46) / 2;
+        // 转速范围（99% - 31%）
+        int range     = 99 - 31;
+
+        // 计算转速百分比
+        speed_percent = 31 + (steps * range) / max_steps;
     }
-    else if (temperature <= 45.0)
+    else
     {
-        return 32;
-    }
-    else if (temperature <= 50.0)
-    {
-        return 40;
-    }
-    else if (temperature <= 55.0)
-    {
-        return 55;
-    }
-    else if (temperature <= 58.0)
-    {
-        return 70;
-    }
-    else if (temperature <= 60.0)
-    {
-        return 85;
+        speed_percent = 100;
     }
 
-    return 100;
+    return speed_percent;
 }
 
 // 初始化函数
@@ -177,17 +175,17 @@ void fun_control::update()
     _update_timer.restart();
     for (int i = 0; i < 4; i++)
     {
-        int speed = get_pwm_value(ds18b20::getInstance()._sensor_config[i].temperature);
+        int speed = adjust_speed(ds18b20::getInstance()._sensor_config[i].temperature);
 
         if (_fan_speeds[i] == speed)
         {
-            //Println("fun %d pin: %d,temp: %f, speed: %d%% same", i + 1,ds18b20::getInstance()._sensor_config[i].output_pin, ds18b20::getInstance()._sensor_config[i].temperature, speed);
+            // Println("fun %d pin: %d,temp: %f, speed: %d%% same", i + 1,ds18b20::getInstance()._sensor_config[i].output_pin, ds18b20::getInstance()._sensor_config[i].temperature, speed);
             continue;
         }
         _fan_speeds[i] = speed;
         analogWrite(ds18b20::getInstance()._sensor_config[i].output_pin, speed);
-        Println("fun %d pin: %d,temp: %f, speed: %d%% update", i + 1,ds18b20::getInstance()._sensor_config[i].output_pin, ds18b20::getInstance()._sensor_config[i].temperature, speed);
-
+        Println("fun %d pin: %d,temp: %f, speed: %d%% update", i + 1, ds18b20::getInstance()._sensor_config[i].output_pin, ds18b20::getInstance()._sensor_config[i].temperature, speed);
     }
 }
 }
+#endif // ENABLE_FAN

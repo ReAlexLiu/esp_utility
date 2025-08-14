@@ -9,6 +9,7 @@
 
 #ifndef ESP_UTILITY_DS18B20_H
 #define ESP_UTILITY_DS18B20_H
+#ifdef ENABLE_DS18B20
 #include "precompiled.h"
 #include "ElapsedTimer.h"
 
@@ -40,4 +41,5 @@ private:
     ElapsedTimer _scan_sensor_timer;
 };
 }
+#endif // ENABLE_DS18B20
 #endif  // ESP_UTILITY_DS18B20_H

@@ -1,4 +1,6 @@
 #include "ds18b20.h"
+
+#ifdef ENABLE_DS18B20
 #include "config.h"
 
 #include <ArduinoJson.h>
@@ -166,3 +168,4 @@ void ds18b20::update()
     }
 }
 }  // namespace esp_utility
+#endif // ENABLE_DS18B20

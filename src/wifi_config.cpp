@@ -1,5 +1,6 @@
 #include "wifi_config.h"
 
+#ifdef ENABLE_WIFI
 #include "config.h"
 
 #include <ArduinoJson.h>
@@ -256,3 +257,4 @@ void wifi_config::update()
     }
 }
 }
+#endif // ENABLE_WIFI

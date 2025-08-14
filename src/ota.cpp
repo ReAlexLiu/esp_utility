@@ -1,5 +1,6 @@
 #include "ota.h"
 
+#ifdef ENABLE_OTA
 #include <ArduinoOTA.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -123,3 +124,4 @@ void ota::update()
     ArduinoOTA.handle();
 }
 }  // namespace esp_utility
+#endif // ENABLE_OTA
