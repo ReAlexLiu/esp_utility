@@ -15,6 +15,9 @@ PB_BIND(MqttConfigMessage, MqttConfigMessage, AUTO)
 PB_BIND(Ds18b20ConfigMessage, Ds18b20ConfigMessage, AUTO)
 
 
+PB_BIND(RtcConfigMessage, RtcConfigMessage, AUTO)
+
+
 PB_BIND(AppsConfigMessage, AppsConfigMessage, AUTO)
 
 

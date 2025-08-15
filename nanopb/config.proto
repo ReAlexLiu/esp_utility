@@ -7,15 +7,19 @@ message WiFiConfigMessage {
 }
 
 message MqttConfigMessage {
-    string MQTT_SERVER = 1 [(nanopb).max_size = 24];
-    uint32 MQTT_PORT = 2;
-    string MQTT_USER = 3 [(nanopb).max_size = 16];
-    string MQTT_PASS = 4 [(nanopb).max_size = 16];
+    string mqtt_server = 1 [(nanopb).max_size = 24];
+    uint32 mqtt_port = 2;
+    string mqtt_user = 3 [(nanopb).max_size = 16];
+    string mqtt_pass = 4 [(nanopb).max_size = 16];
 }
 
 message Ds18b20ConfigMessage {
     bytes address = 1 [(nanopb).max_size = 8];
     uint32 output_pin = 2;
+}
+message RtcConfigMessage {
+   string ntp_server = 1 [(nanopb).max_size = 32];
+   uint32 timezone = 2;
 }
 
 message AppsConfigMessage {
@@ -25,4 +29,5 @@ message ConfigMessage {
     WiFiConfigMessage wifi_config = 1;
     AppsConfigMessage apps_config = 2;
     MqttConfigMessage mqtt_config = 3;
+    RtcConfigMessage rtc_config = 4;
 }
