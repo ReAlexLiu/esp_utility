@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>控制中心</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        .control-card, .flash-card {
+            transition: all 0.2s ease;
+        }
+        .control-card:hover, .flash-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
+        .sensor-row, .network-row {
+            transition: all 0.2s ease;
+        }
+        .sensor-row:hover, .network-row:hover {
+            background-color: rgba(59, 130, 246, 0.05);
+        }
+        .network-row.selected {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-left: 3px solid #3b82f6;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-connected {
+            background-color: #10b981; /* 绿色 */
+        }
+        .status-disconnected {
+            background-color: #ef4444; /* 红色 */
+        }
+        .status-scanning {
+            background-color: #f59e0b; /* 黄色 */
+        }
+        .signal-strength {
+            display: flex;
+            align-items: center;
+        }
+        .signal-bar {
+            width: 3px;
+            margin: 0 1px;
+            background-color: #9ca3af;
+            border-radius: 1px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .tab-button {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tab-button.active {
+            border-bottom: 3px solid #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+<div class="container mx-auto px-4 py-8 max-w-3xl">
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <!-- 顶部标签栏 -->
+        <div class="border-b border-gray-200">
+            <div class="flex flex-wrap">
+                <div class="tab-button active px-6 py-4 text-gray-700" data-tab="wifi">WiFi配置</div>
+                <div class="tab-button px-6 py-4 text-gray-700" data-tab="ds18b20">DS18B20配置</div>
+                <div class="tab-button px-6 py-4 text-gray-700" data-tab="fan">风扇配置</div>
+                <div class="tab-button px-6 py-4 text-gray-700" data-tab="time">时钟/时间设置</div>
+                <div class="tab-button px-6 py-4 text-gray-700" data-tab="ota">OTA更新</div>
+            </div>
+        </div>
+
+
+        <!-- WiFi配置标签内容 -->
+        <div id="wifi-content" class="tab-content active p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold text-center text-blue-600 w-full">WiFi 配网设置</h1>
+            </div>
+
+            <!-- 配置说明卡片 -->
+            <div class="flash-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 transition-all duration-200">
+                <h2 class="text-lg font-semibold text-gray-800 mb-2">网络配置</h2>
+                <p class="text-sm text-gray-600">
+                    请从列表中选择您要连接的WiFi网络，输入密码后点击连接按钮。设备将保存配置并尝试连接到指定网络。
+                    <span id="device-status" class="inline-flex items-center ml-2">
+                        <span class="status-indicator status-scanning"></span>
+                        <span>等待配置</span>
+                    </span>
+                </p>
+            </div>
+
+            <!-- 网络扫描和配置区域 -->
+            <form id="wifiForm" class="space-y-6">
+                <!-- 扫描按钮 -->
+                <div class="mb-4">
+                    <button type="button" id="scanBtn"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center">
+                        <i class="fa fa-search mr-2"></i> 扫描附近WiFi网络
+                    </button>
+                </div>
+
+                <!-- 网络列表 -->
+                <div class="overflow-x-auto mb-4">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                        <tr>
+                            <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                WiFi名称 (SSID)
+                            </th>
+                            <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                信号强度
+                            </th>
+                            <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                加密方式
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody id="networksList" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                                <i class="fa fa-wifi mr-2"></i>点击扫描按钮获取附近WiFi网络
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 选中的网络和密码输入 -->
+                <div id="networkConfig" class="space-y-4 hidden">
+                    <div>
+                        <label for="selectedSsid"
+                               class="block text-sm font-medium text-gray-700 mb-1">选中的网络</label>
+                        <input type="text" id="selectedSsid" name="ssid" readonly
+                               class="form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm bg-gray-50">
+                    </div>
+
+                    <div>
+                        <label for="wifiPassword"
+                               class="block text-sm font-medium text-gray-700 mb-1">WiFi密码</label>
+                        <input type="password" id="wifiPassword" name="password" autocomplete="new-password"
+                               class="form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <p class="mt-1 text-xs text-gray-500">如果网络没有密码，请留空</p>
+                    </div>
+                </div>
+
+                <div class="flex space-x-4 pt-2">
+                    <button type="submit" id="connectBtn"
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center"
+                            disabled>
+                        <i class="fa fa-wifi mr-2"></i> 连接网络
+                    </button>
+                    <button type="button" id="resetBtn"
+                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition duration-200 flex items-center">
+                        <i class="fa fa-refresh mr-1"></i> 重置
+                    </button>
+                </div>
+            </form>
+
+            <!-- 保存状态 -->
+            <div id="wifi-status" class="mt-4 p-3 rounded-md hidden"></div>
+
+            <!-- 连接进度 -->
+            <div id="connect-progress" class="mt-4 hidden">
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div id="connect-progress-bar" class="h-full bg-green-500 rounded-full progress-bar"
+                         style="width: 0%"></div>
+                </div>
+                <p id="connect-progress-text" class="text-xs text-gray-500 mt-1">连接中...</p>
+            </div>
+
+            <!-- 设备信息卡片 -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden p-6 mt-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-3">设备信息</h2>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">设备名称:</span>
+                        <span id="deviceName" class="font-medium text-gray-900">ESP8266-Config</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">MAC地址:</span>
+                        <span id="deviceMac" class="font-medium text-gray-900 font-mono">--:--:--:--:--:--</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">配网模式:</span>
+                        <span id="deviceMode" class="font-medium text-gray-900">AP模式</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">固件版本:</span>
+                        <span id="firmwareVersion" class="font-medium text-gray-900">1.0.0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- DS18B20配置标签内容 -->
+        <div id="ds18b20-content" class="tab-content p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold text-center text-blue-600">DS18B20 配置</h1>
+            </div>
+
+            <!-- 配置说明卡片 -->
+            <div class="flash-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 transition-all duration-200">
+                <h2 class="text-lg font-semibold text-gray-800 mb-2">传感器配置</h2>
+                <p class="text-sm text-gray-600">
+                    在此页面配置4路DS18B20温度传感器的输出引脚。选择每路传感器对应的GPIO引脚，点击保存按钮应用配置。
+                    <span class="inline-flex items-center ml-2"><span
+                            class="status-indicator status-connected"></span>已连接</span>
+                    <span class="inline-flex items-center ml-2"><span
+                            class="status-indicator status-disconnected"></span>未连接</span>
+                </p>
+            </div>
+
+            <!-- 传感器配置表格 -->
+            <form id="configForm" class="space-y-6">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                        <tr>
+                            <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                                传感器
+                            </th>
+                            <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                设备地址
+                            </th>
+                            <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                当前温度
+                            </th>
+                            <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                连接状态
+                            </th>
+                            <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                                输出引脚
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                        <!-- 第一路传感器 -->
+                        <tr class="sensor-row">
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">第一路</div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div id="address-1" class="text-sm text-gray-600 font-mono break-all max-w-[120px]">
+                                    --
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="text-sm text-gray-900">
+                                    <span id="temp-1">--.-</span>
+                                    <span class="text-gray-500">°C</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="text-sm" id="status-1">
+                                    <span class="status-indicator status-disconnected"></span>
+                                    <span>未连接</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <select name="output-1"
+                                        class="form-select block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                    <option value="5">GPIO5</option>
+                                    <option value="13">GPIO13</option>
+                                    <option value="12">GPIO12</option>
+                                    <option value="14">GPIO14</option>
+                                </select>
+                            </td>
+                        </tr>
+
+                        <!-- 第二路传感器 -->
+                        <tr class="sensor-row">
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">第二路</div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div id="address-2" class="text-sm text-gray-600 font-mono break-all max-w-[120px]">
+                                    --
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="text-sm text-gray-900">
+                                    <span id="temp-2">--.-</span>
+                                    <span class="text-gray-500">°C</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="text-sm" id="status-2">
+                                    <span class="status-indicator status-disconnected"></span>
+                                    <span>未连接</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <select name="output-2"
+                                        class="form-select block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                    <option value="5">GPIO5</option>
+                                    <option value="13">GPIO13</option>
+                                    <option value="12">GPIO12</option>
+                                    <option value="14">GPIO14</option>
+                                </select>
+                            </td>
+                        </tr>
+
+                        <!-- 第三路传感器 -->
+                        <tr class="sensor-row">
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">第三路</div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div id="address-3" class="text-sm text-gray-600 font-mono break-all max-w-[120px]">
+                                    --
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="text-sm text-gray-900">
+                                    <span id="temp-3">--.-</span>
+                                    <span class="text-gray-500">°C</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="text-sm" id="status-3">
+                                    <span class="status-indicator status-disconnected"></span>
+                                    <span>未连接</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <select name="output-3"
+                                        class="form-select block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                    <option value="5">GPIO5</option>
+                                    <option value="13">GPIO13</option>
+                                    <option value="12">GPIO12</option>
+                                    <option value="14">GPIO14</option>
+                                </select>
+                            </td>
+                        </tr>
+
+                        <!-- 第四路传感器 -->
+                        <tr class="sensor-row">
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">第四路</div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div id="address-4" class="text-sm text-gray-600 font-mono break-all max-w-[120px]">
+                                    --
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="text-sm text-gray-900">
+                                    <span id="temp-4">--.-</span>
+                                    <span class="text-gray-500">°C</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="text-sm" id="status-4">
+                                    <span class="status-indicator status-disconnected"></span>
+                                    <span>未连接</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 rounded-br-lg">
+                                <select name="output-4"
+                                        class="form-select block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                    <option value="5">GPIO5</option>
+                                    <option value="13">GPIO13</option>
+                                    <option value="12">GPIO12</option>
+                                    <option value="14">GPIO14</option>
+                                </select>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="refreshSensorsBtn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center">
+                        <i class="fa fa-refresh mr-2"></i> 刷新传感器
+                    </button>
+                    <button type="submit" id="saveConfigBtn"
+                            class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center">
+                        <i class="fa fa-save mr-2"></i> 保存配置
+                    </button>
+                </div>
+            </form>
+
+            <!-- 配置状态 -->
+            <div id="config-status" class="mt-4 p-3 rounded-md hidden"></div>
+        </div>
+
+
+        <!-- 风扇配置标签内容 -->
+        <div id="fan-content" class="tab-content p-6">
+            <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">风扇控制配置</h1>
+
+            <!-- 风扇控制卡片 -->
+            <div class="flash-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 transition-all duration-200">
+                <h2 class="text-lg font-semibold text-gray-800 mb-2">风扇状态</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500">当前模式</p>
+                        <p id="fan-mode" class="text-xl font-bold text-blue-600">自动</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">运行状态</p>
+                        <p id="fan-status" class="text-xl font-bold text-green-600">停止</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 风扇控制设置 -->
+            <form id="fanForm" class="space-y-6">
+                <!-- 手动/自动模式切换 -->
+                <div class="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                    <div>
+                        <h3 class="font-medium text-gray-900">控制模式</h3>
+                        <p class="text-sm text-gray-500">选择自动或手动控制风扇</p>
+                    </div>
+                    <div class="relative inline-block w-12 h-6">
+                        <input type="checkbox" id="fan-auto-mode" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer checked:right-0 checked:border-green-400"/>
+                        <label for="fan-auto-mode" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </div>
+
+                <!-- 手动控制区域 -->
+                <div id="manual-control" class="space-y-4 hidden">
+                    <div class="p-4 bg-white rounded-lg border border-gray-200">
+                        <h3 class="font-medium text-gray-900 mb-3">手动控制</h3>
+                        <div class="flex space-x-4">
+                            <button type="button" id="fan-on-btn"
+                                    class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition duration-200">
+                                <i class="fa fa-play mr-2"></i> 开启风扇
+                            </button>
+                            <button type="button" id="fan-off-btn"
+                                    class="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition duration-200">
+                                <i class="fa fa-stop mr-2"></i> 关闭风扇
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 自动控制区域 -->
+                <div id="auto-control" class="space-y-4">
+                    <div class="p-4 bg-white rounded-lg border border-gray-200">
+                        <h3 class="font-medium text-gray-900 mb-3">自动控制参数</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="min-temp" class="block text-sm font-medium text-gray-700 mb-1">启动温度 (°C)</label>
+                                <input type="number" id="min-temp" name="min-temp" min="0" max="50" step="0.5" value="25"
+                                       class="form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            </div>
+                            <div>
+                                <label for="max-temp" class="block text-sm font-medium text-gray-700 mb-1">停止温度 (°C)</label>
+                                <input type="number" id="max-temp" name="max-temp" min="0" max="50" step="0.5" value="22"
+                                       class="form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label for="sensor-select" class="block text-sm font-medium text-gray-700 mb-1">关联传感器</label>
+                            <select id="sensor-select" name="sensor-select"
+                                    class="form-select block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                <option value="1">第一路传感器</option>
+                                <option value="2">第二路传感器</option>
+                                <option value="3">第三路传感器</option>
+                                <option value="4">第四路传感器</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" id="save-fan-config"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition duration-200 flex items-center">
+                        <i class="fa fa-save mr-2"></i> 保存配置
+                    </button>
+                </div>
+            </form>
+
+            <!-- 风扇状态信息 -->
+            <div id="fan-status-message" class="mt-4 p-3 rounded-md hidden"></div>
+        </div>
+
+
+        <!-- 时钟/时间设置标签内容 -->
+        <div id="time-content" class="tab-content p-6">
+            <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">时钟/时间设置</h1>
+
+            <!-- 时间状态卡片 -->
+            <div class="flash-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 transition-all duration-200">
+                <h2 class="text-lg font-semibold text-gray-800 mb-2">当前时间</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm text-gray-500">设备时间</p>
+                        <p id="device-time" class="text-xl font-bold text-blue-600">--:--:--</p>
+                        <p id="device-date" class="text-sm text-gray-600">----年--月--日 星期--</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500">时间源</p>
+                        <p id="time-source" class="text-xl font-bold text-green-600">未同步</p>
+                        <p class="text-sm text-gray-600">
+                            <span class="status-indicator" id="time-status-indicator"></span>
+                            <span id="time-status-text">等待同步</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NTP服务器配置 -->
+            <form id="ntpForm" class="space-y-6 mb-8">
+                <div>
+                    <label for="ntpServer" class="block text-sm font-medium text-gray-700 mb-1">NTP服务器</label>
+                    <input type="text" id="ntpServer" name="ntpServer" value="pool.ntp.org"
+                           class="form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <p class="mt-1 text-xs text-gray-500">常用NTP服务器: pool.ntp.org, cn.ntp.org.cn,
+                        ntp.aliyun.com</p>
+                </div>
+
+                <div>
+                    <label for="timezone" class="block text-sm font-medium text-gray-700 mb-1">时区偏移
+                        (小时)</label>
+                    <input type="number" id="timezone" name="timezone" value="8" min="-12" max="12" step="0.5"
+                           class="form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <p class="mt-1 text-xs text-gray-500">例如: 中国为+8，UTC为0</p>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button type="submit" id="syncNtpBtn"
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center">
+                        <i class="fa fa-refresh mr-2"></i> NTP服务器对时
+                    </button>
+                    <button type="button" id="syncBrowserBtn"
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center">
+                        <i class="fa fa-desktop mr-2"></i> 同步浏览器时间
+                    </button>
+                </div>
+            </form>
+
+            <!-- PCF8563状态 -->
+            <div class="control-card bg-white border border-gray-200 rounded-lg p-4 transition-all duration-200">
+                <h2 class="text-lg font-semibold text-gray-800 mb-3">PCF8563 实时时钟</h2>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">模块状态:</span>
+                        <span id="pcf-status" class="font-medium text-gray-900">未检测到</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">最后同步时间:</span>
+                        <span id="last-sync-time" class="font-medium text-gray-900">从未</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 状态信息 -->
+            <div id="time-status" class="mt-4 p-3 rounded-md hidden"></div>
+
+            <!-- 同步进度 -->
+            <div id="time-sync-progress" class="mt-4 hidden">
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div id="time-sync-bar" class="h-full bg-green-500 rounded-full" style="width: 0%"></div>
+                </div>
+                <p id="time-sync-text" class="text-xs text-gray-500 mt-1">同步中...</p>
+            </div>
+        </div>
+
+
+        <!-- OTA更新标签内容 -->
+        <div id="ota-content" class="tab-content p-6">
+            <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">OTA 固件更新</h1>
+
+            <!-- 更新说明卡片 -->
+            <div class="flash-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 transition-all duration-200">
+                <h2 class="text-lg font-semibold text-gray-800 mb-2">固件更新</h2>
+                <p class="text-sm text-gray-600">
+                    在此页面可以更新设备固件。请选择最新的固件文件（.bin格式），然后点击更新按钮。更新过程中请勿断电或刷新页面。
+                </p>
+            </div>
+
+            <!-- OTA更新表单 -->
+            <form id="otaForm" class="space-y-6">
+                <div>
+                    <label for="firmwareFile" class="block text-sm font-medium text-gray-700 mb-1">选择固件文件</label>
+                    <input type="file" id="firmwareFile" name="firmwareFile" accept=".bin"
+                           class="form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <p class="mt-1 text-xs text-gray-500">仅支持 .bin 格式的固件文件</p>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" id="updateBtn"
+                            class="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-6 rounded-md transition duration-200 flex items-center">
+                        <i class="fa fa-upload mr-2"></i> 开始更新
+                    </button>
+                </div>
+            </form>
+
+            <!-- 更新进度 -->
+            <div id="ota-progress" class="mt-4 hidden">
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div id="ota-progress-bar" class="h-full bg-green-500 rounded-full progress-bar"
+                         style="width: 0%"></div>
+                </div>
+                <p id="ota-progress-text" class="text-xs text-gray-500 mt-1">准备更新...</p>
+            </div>
+
+            <!-- 更新状态 -->
+            <div id="ota-status" class="mt-4 p-3 rounded-md hidden"></div>
+
+            <!-- 固件信息 -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden p-6 mt-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-3">固件信息</h2>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <span class="text-gray-500">当前版本:</span>
+                        <span id="current-version" class="font-medium text-gray-900">1.0.0</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">最新版本:</span>
+                        <span id="latest-version" class="font-medium text-gray-900">1.0.0</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">发布日期:</span>
+                        <span id="release-date" class="font-medium text-gray-900">2023-01-01</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500">更新说明:</span>
+                        <span id="update-note" class="font-medium text-gray-900">初始版本</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 标签切换功能
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => {
+            // 移除所有活动状态
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // 添加当前活动状态
+            button.classList.add('active');
+            const tabId = button.getAttribute('data-tab');
+            document.getElementById(`${tabId}-content`).classList.add('active');
+            
+            // 时间标签页特殊处理
+            if (tabId === 'time') {
+                updateTimeInfo();
+            }
+        });
+    });
+
+    // 时间信息更新函数
+    function updateTimeInfo() {
+        fetch('/time-info')
+            .then(response => response.json())
+            .then(data => {
+                // 解析时间
+                const datetime = new Date(data.time);
+                
+                // 更新设备时间显示
+                document.getElementById('device-time').textContent = 
+                    datetime.toTimeString().slice(0, 8);
+                document.getElementById('device-date').textContent = 
+                    `${datetime.getFullYear()}年${datetime.getMonth()+1}月${datetime.getDate()}日 星期${['日','一','二','三','四','五','六'][datetime.getDay()]}`;
+                
+                // 更新时间源信息
+                document.getElementById('time-source').textContent = data.source ? 'NTP服务器' : '本地时钟';
+                
+                // 更新同步状态
+                const statusIndicator = document.getElementById('time-status-indicator');
+                const statusText = document.getElementById('time-status-text');
+                if (data.status) {
+                    statusIndicator.className = 'status-indicator status-connected';
+                    statusText.textContent = '已同步';
+                } else {
+                    statusIndicator.className = 'status-indicator status-disconnected';
+                    statusText.textContent = '未同步';
+                }
+                
+                // 更新PCF8563状态
+                document.getElementById('pcf-status').textContent = data.pcf_detected ? '已检测到' : '未检测到';
+                
+                // 更新最后同步时间
+                document.getElementById('last-sync-time').textContent = data.lastSync || '从未';
+                
+                // 更新表单中的NTP服务器和时区
+                document.getElementById('ntpServer').value = data.ntpServer || 'pool.ntp.org';
+                document.getElementById('timezone').value = data.timezone || 8;
+            })
+            .catch(error => console.error('获取时间信息失败:', error));
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        // 如果当前激活的是时间标签，立即加载时间信息
+        if (document.querySelector('.tab-button.active[data-tab="time"]')) {
+            updateTimeInfo();
+            // 设置定时器，每5秒更新一次
+            setInterval(updateTimeInfo, 5000);
+        }
+    });
+</script>
+</body>
+</html>

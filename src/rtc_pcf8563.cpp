@@ -1,110 +1,66 @@
-#include "rtc.h"
+#include "rtc_pcf8563.h"
 
-// #ifdef ENABLE_RTC
+//#ifdef ENABLE_RTC_PCF8563
 
 #include "Config.h"
 
 #include <ArduinoJson.h>
 #include <ESP8266WebServer.h>
 #include <NTPClient.h>
-#include <PCF8563.h>
-#include <time.h>
 #include <WiFiUdp.h>
+#include <pcf8563.h>
+#include <time.h>
 
 
 namespace esp_utility
 {
-// NTPå®¢æˆ·ç«¯è®¾ç½®
-WiFiUDP       ntpUDP;
-NTPClient     timeClient(ntpUDP, "pool.ntp.org", 8 * 3600, 60000 * 60 * 8);  // é»˜è®¤UTC+8ï¼Œ10åˆ†é’ŸåŒæ­¥ä¸€æ¬¡
 
-// PCF8563 RTCæ¨¡å—å®ä¾‹
-PCF8563_Class pcf8563;
-
-// æ—¶é—´ç›¸å…³å˜é‡
-String        ntpServer      = "pool.ntp.org";
-float         timezoneOffset = 8.0;
-
-String        lastSyncTime   = "ä»æœª";
-String        timeSource     = "æœªåŒæ­¥";
-String        timeStatus     = "æœªåŒæ­¥";
-
-// è½¬æ¢æ˜ŸæœŸæ•°å­—ä¸ºä¸­æ–‡
-String        rtc::getWeekday(int weekday)
-{
-    // æ³¨æ„ï¼šPCF8563ä¸­æ˜ŸæœŸä¸€æ˜¯1ï¼Œæ˜ŸæœŸæ—¥æ˜¯0ï¼›è€Œtm_wdayä¸­æ˜ŸæœŸæ—¥æ˜¯0ï¼Œæ˜ŸæœŸå…­æ˜¯6
-    // è¿™é‡Œç»Ÿä¸€è½¬æ¢ä¸ºæ˜ŸæœŸæ—¥ä¸º0çš„æ ¼å¼å¤„ç†
-    if (weekday == 7)
-    {
-        weekday = 0;  // å¤„ç†å¯èƒ½çš„7å€¼ï¼ˆæœ‰äº›åº“ç”¨7è¡¨ç¤ºæ˜ŸæœŸæ—¥ï¼‰
-    }
-
-    switch (weekday)
-    {
-    case 0:
-        return "æ˜ŸæœŸæ—¥";
-    case 1:
-        return "æ˜ŸæœŸä¸€";
-    case 2:
-        return "æ˜ŸæœŸäºŒ";
-    case 3:
-        return "æ˜ŸæœŸä¸‰";
-    case 4:
-        return "æ˜ŸæœŸå››";
-    case 5:
-        return "æ˜ŸæœŸäº”";
-    case 6:
-        return "æ˜ŸæœŸå…­";
-    default:
-        return "æœªçŸ¥";
-    }
-}
-
-void rtc::create()
+void rtc_pcf8563::create()
 {
 }
 
-void rtc::destory()
+void rtc_pcf8563::destory()
 {
 }
 
-void rtc::begin(ESP8266WebServer& server)
-{  // åˆå§‹åŒ–NTPå®¢æˆ·ç«¯
+void rtc_pcf8563::begin(ESP8266WebServer& server)
+{
+    // ³õÊ¼»¯NTP¿Í»§¶Ë
     timeClient.setPoolServerName(ntpServer.c_str());
     timeClient.begin();
 
-    // åˆå§‹åŒ–PCF8563 - ä½¿ç”¨Wireåº“ï¼Œé»˜è®¤åœ°å€0x51
-    _pcf_detected = (pcf8563.begin() == 0);
-    if (!pcfDetected)
+    // ³õÊ¼»¯PCF8563 - Ê¹ÓÃWire¿â£¬Ä¬ÈÏµØÖ·0x51
+    _pcf_detected = (rtc_pcf8563.begin() == 0);
+    if (!_pcf_detected)
     {
-        Serial.println("æœªæ£€æµ‹åˆ°PCF8563æ¨¡å—!");
+        Serial.println("Î´¼ì²âµ½PCF8563Ä£¿é!");
     }
     else
     {
-        Serial.println("PCF8563æ¨¡å—åˆå§‹åŒ–æˆåŠŸ");
-        // æ£€æŸ¥ç”µæ± ç”µå‹ä½æ ‡å¿—
-        if (pcf8563.status2() & PCF8563_VOL_LOW_MASK)
+        Serial.println("PCF8563Ä£¿é³õÊ¼»¯³É¹¦");
+        // ¼ì²éµç³ØµçÑ¹µÍ±êÖ¾
+        if (rtc_pcf8563.status2() & PCF8563_VOL_LOW_MASK)
         {
-            Serial.println("è­¦å‘Š: PCF8563ç”µæ± ç”µå‹ä½ï¼Œå¯èƒ½æ— æ³•ä¿æŒæ—¶é—´");
+            Serial.println("¾¯¸æ: PCF8563µç³ØµçÑ¹µÍ£¬¿ÉÄÜÎŞ·¨±£³ÖÊ±¼ä");
         }
     }
 
     server.on("/time-info", HTTP_GET, [&]() {
-        // åˆ›å»ºJSONå“åº”
+        // ´´½¨JSONÏìÓ¦
         JsonDocument doc;
 
-        // è·å–å½“å‰æ—¶é—´
-        if (pcfDetected && pcf8563.isVaild())
+        // »ñÈ¡µ±Ç°Ê±¼ä
+        if (_pcf_detected && rtc_pcf8563.isVaild())
         {
-            RTC_Date now = pcf8563.getDateTime();
+            RTC_Date now = rtc_pcf8563.getDateTime();
             doc["time"]  = String(now.hour) + ":" +
                           (now.minute < 10 ? "0" : "") + String(now.minute) + ":" +
                           (now.second < 10 ? "0" : "") + String(now.second);
 
-            doc["date"] = String(now.year) + "å¹´" +
-                          String(now.month) + "æœˆ" +
-                          String(now.day) + "æ—¥ " +
-                          getWeekday(pcf8563.getDayOfWeek(now.day, now.month, now.year));
+            doc["date"] = String(now.year) + "Äê" +
+                          String(now.month) + "ÔÂ" +
+                          String(now.day) + "ÈÕ " +
+                          getWeekday(rtc_pcf8563.getDayOfWeek(now.day, now.month, now.year));
         }
         else
         {
@@ -116,20 +72,20 @@ void rtc::begin(ESP8266WebServer& server)
                           (timeinfo->tm_min < 10 ? "0" : "") + String(timeinfo->tm_min) + ":" +
                           (timeinfo->tm_sec < 10 ? "0" : "") + String(timeinfo->tm_sec);
 
-            doc["date"] = String(timeinfo->tm_year + 1900) + "å¹´" +
-                          String(timeinfo->tm_mon + 1) + "æœˆ" +
-                          String(timeinfo->tm_mday) + "æ—¥ " +
+            doc["date"] = String(timeinfo->tm_year + 1900) + "Äê" +
+                          String(timeinfo->tm_mon + 1) + "ÔÂ" +
+                          String(timeinfo->tm_mday) + "ÈÕ " +
                           getWeekday(timeinfo->tm_wday);
         }
 
         doc["source"]      = timeSource;
         doc["status"]      = timeStatus;
-        doc["pcfDetected"] = pcfDetected;
+        doc["pcfDetected"] = _pcf_detected;
         doc["lastSync"]    = lastSyncTime;
         doc["ntpServer"]   = ntpServer;
         doc["timezone"]    = timezoneOffset;
 
-        // å‘é€JSONå“åº”
+        // ·¢ËÍJSONÏìÓ¦
         String jsonResponse;
         serializeJson(doc, jsonResponse);
         server.send(200, "application/json", jsonResponse);
@@ -140,11 +96,11 @@ void rtc::begin(ESP8266WebServer& server)
 
         if (error)
         {
-            server.send(400, "application/json", "{\"success\": false, \"message\": \"æ— æ•ˆçš„è¯·æ±‚æ•°æ®\"}");
+            server.send(400, "application/json", "{\"success\": false, \"message\": \"ÎŞĞ§µÄÇëÇóÊı¾İ\"}");
             return;
         }
 
-        // æ›´æ–°NTPæœåŠ¡å™¨å’Œæ—¶åŒº
+        // ¸üĞÂNTP·şÎñÆ÷ºÍÊ±Çø
         if (doc.containsKey("ntpServer"))
         {
             ntpServer = doc["ntpServer"].as<String>();
@@ -156,49 +112,49 @@ void rtc::begin(ESP8266WebServer& server)
             timezoneOffset = doc["timezone"].as<float>();
         }
 
-        // åŒæ­¥NTPæ—¶é—´
+        // Í¬²½NTPÊ±¼ä
         timeStatus     = "syncing";
-        timeSource     = "åŒæ­¥ä¸­...";
+        timeSource     = "Í¬²½ÖĞ...";
 
         bool   success = false;
-        String message = "NTPåŒæ­¥å¤±è´¥";
+        String message = "NTPÍ¬²½Ê§°Ü";
 
-        // å¼ºåˆ¶æ›´æ–°NTPæ—¶é—´
+        // Ç¿ÖÆ¸üĞÂNTPÊ±¼ä
         timeClient.forceUpdate();
 
         if (timeClient.getEpochTime() > 1600000000)
-        {  // æ£€æŸ¥æ˜¯å¦è·å–åˆ°æœ‰æ•ˆæ—¶é—´
+        {  // ¼ì²éÊÇ·ñ»ñÈ¡µ½ÓĞĞ§Ê±¼ä
             time_t     epochTime = timeClient.getEpochTime() + timezoneOffset * 3600;
             struct tm* timeinfo  = localtime(&epochTime);
 
-            // æ›´æ–°PCF8563
-            if (pcfDetected)
+            // ¸üĞÂPCF8563
+            if (_pcf_detected)
             {
-                // ä½¿ç”¨åº“æä¾›çš„setDateTimeæ–¹æ³•è®¾ç½®æ—¶é—´
-                pcf8563.setDateTime(
-                    timeinfo->tm_year + 1900,  // å¹´
-                    timeinfo->tm_mon + 1,      // æœˆ
-                    timeinfo->tm_mday,         // æ—¥
-                    timeinfo->tm_hour,         // æ—¶
-                    timeinfo->tm_min,          // åˆ†
-                    timeinfo->tm_sec           // ç§’
+                // Ê¹ÓÃ¿âÌá¹©µÄsetDateTime·½·¨ÉèÖÃÊ±¼ä
+                rtc_pcf8563.setDateTime(
+                    timeinfo->tm_year + 1900,  // Äê
+                    timeinfo->tm_mon + 1,      // ÔÂ
+                    timeinfo->tm_mday,         // ÈÕ
+                    timeinfo->tm_hour,         // Ê±
+                    timeinfo->tm_min,          // ·Ö
+                    timeinfo->tm_sec           // Ãë
                 );
 
-                // åŒæ­¥ç³»ç»Ÿæ—¶é—´åˆ°RTC
-                pcf8563.syncToRtc();
+                // Í¬²½ÏµÍ³Ê±¼äµ½RTC
+                rtc_pcf8563.syncToRtc();
             }
 
-            // æ›´æ–°çŠ¶æ€ä¿¡æ¯
+            // ¸üĞÂ×´Ì¬ĞÅÏ¢
             lastSyncTime = String(timeinfo->tm_year + 1900) + "-" +
                            (timeinfo->tm_mon + 1 < 10 ? "0" : "") + String(timeinfo->tm_mon + 1) + "-" +
                            (timeinfo->tm_mday < 10 ? "0" : "") + String(timeinfo->tm_mday) + " " +
                            (timeinfo->tm_hour < 10 ? "0" : "") + String(timeinfo->tm_hour) + ":" +
                            (timeinfo->tm_min < 10 ? "0" : "") + String(timeinfo->tm_min);
 
-            timeSource = "NTPæœåŠ¡å™¨";
+            timeSource = "NTP·şÎñÆ÷";
             timeStatus = "synced";
             success    = true;
-            message    = "NTPåŒæ­¥æˆåŠŸ";
+            message    = "NTPÍ¬²½³É¹¦";
         }
 
         server.send(200, "application/json", "{\"success\": " + String(success ? "true" : "false") + ", \"message\": \"" + message + "\"}");
@@ -209,11 +165,11 @@ void rtc::begin(ESP8266WebServer& server)
 
         if (error)
         {
-            server.send(400, "application/json", "{\"success\": false, \"message\": \"æ— æ•ˆçš„è¯·æ±‚æ•°æ®\"}");
+            server.send(400, "application/json", "{\"success\": false, \"message\": \"ÎŞĞ§µÄÇëÇóÊı¾İ\"}");
             return;
         }
 
-        // æå–æ—¶é—´æ•°æ®
+        // ÌáÈ¡Ê±¼äÊı¾İ
         int year       = doc["year"];
         int month      = doc["month"];
         int day        = doc["day"];
@@ -222,41 +178,41 @@ void rtc::begin(ESP8266WebServer& server)
         int second     = doc["second"];
         timezoneOffset = doc["timezone"];
 
-        // æ›´æ–°PCF8563
+        // ¸üĞÂPCF8563
         bool   success = false;
-        String message = "æ—¶é—´åŒæ­¥å¤±è´¥";
+        String message = "Ê±¼äÍ¬²½Ê§°Ü";
 
-        if (pcfDetected)
+        if (_pcf_detected)
         {
-            // ä½¿ç”¨åº“çš„RTC_Dateç»“æ„è®¾ç½®æ—¶é—´
+            // Ê¹ÓÃ¿âµÄRTC_Date½á¹¹ÉèÖÃÊ±¼ä
             RTC_Date newDate(year, month, day, hour, minute, second);
-            pcf8563.setDateTime(newDate);
-            pcf8563.syncToRtc();
+            rtc_pcf8563.setDateTime(newDate);
+            rtc_pcf8563.syncToRtc();
 
-            // æ›´æ–°çŠ¶æ€ä¿¡æ¯
+            // ¸üĞÂ×´Ì¬ĞÅÏ¢
             lastSyncTime = String(year) + "-" +
                            (month < 10 ? "0" : "") + String(month) + "-" +
                            (day < 10 ? "0" : "") + String(day) + " " +
                            (hour < 10 ? "0" : "") + String(hour) + ":" +
                            (minute < 10 ? "0" : "") + String(minute);
 
-            timeSource = "æµè§ˆå™¨æ—¶é—´";
+            timeSource = "ä¯ÀÀÆ÷Ê±¼ä";
             timeStatus = "synced";
             success    = true;
-            message    = "æ—¶é—´åŒæ­¥æˆåŠŸ";
+            message    = "Ê±¼äÍ¬²½³É¹¦";
         }
 
         server.send(200, "application/json", "{\"success\": " + String(success ? "true" : "false") + ", \"message\": \"" + message + "\"}");
     });
 
-    // å¯åŠ¨æœåŠ¡å™¨
+    // Æô¶¯·şÎñÆ÷
     server.begin();
-    Serial.println("æœåŠ¡å™¨å¯åŠ¨æˆåŠŸ");
+    Serial.println("·şÎñÆ÷Æô¶¯³É¹¦");
 }
 
-void rtc::update()
+void rtc_pcf8563::update()
 {
-    timeClient.update();
+    //timeClient.update();
 }
 }  // namespace esp_utility
-// #endif // ENABLE_OTA
+//#endif // ENABLE_RTC_PCF8563

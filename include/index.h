@@ -110,7 +110,7 @@ const char index_html[] PROGMEM =
 #ifdef ENABLE_FAN
     R"rawliteral(<div class="tab-button px-6 py-4 text-gray-700" data-tab="fan">风扇配置</div>)rawliteral"
 #endif
-#ifdef ENABLE_RTC
+#ifdef ENABLE_RTC_PCF8563
     R"rawliteral(<div class="tab-button px-6 py-4 text-gray-700" data-tab="time">时钟/时间设置</div>)rawliteral"
 #endif
 #ifdef ENABLE_OTA
@@ -497,84 +497,86 @@ const char index_html[] PROGMEM =
 )rawliteral"
 #endif  // ENABLE_FAN
 
-#ifdef ENABLE_RTC
+#ifdef ENABLE_RTC_PCF8563
     R"rawliteral(
-    <div id="time-content" class="tab-content p-6">
-    <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">时钟/时间设置</h1>
+    <!-- 时钟/时间设置标签内容 -->
+<div id="time-content" class="tab-content p-6">
+<h1 class="text-2xl font-bold text-center text-blue-600 mb-6">时钟/时间设置</h1>
 
-    <!-- 时间状态卡片 -->
-    <div class="flash-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 transition-all duration-200">
-        <h2 class="text-lg font-semibold text-gray-800 mb-2">当前时间</h2>
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <p class="text-sm text-gray-500">设备时间</p>
-                <p id="device-time" class="text-xl font-bold text-blue-600">--:--:--</p>
-                <p id="device-date" class="text-sm text-gray-600">----年--月--日 星期--</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-500">时间源</p>
-                <p id="time-source" class="text-xl font-bold text-green-600">未同步</p>
-                <p class="text-sm text-gray-600">
-                    <span class="status-indicator" id="time-status-indicator"></span>
-                    <span id="time-status-text">等待同步</span>
-                </p>
-            </div>
+<!-- 时间状态卡片 -->
+<div class="flash-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 transition-all duration-200">
+    <h2 class="text-lg font-semibold text-gray-800 mb-2">当前时间信息</h2>
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <span class="text-sm text-gray-500">设备时间:</span>
+            <span id="device-time" class="text-lg font-medium text-gray-900">--:--:--</span>
+            <span id="device-date" class="text-sm text-gray-600 ml-2">----/--/--</span>
+        </div>
+        <div>
+            <span class="text-sm text-gray-500">最后同步时间:</span>
+            <span id="last-sync-time" class="text-sm text-gray-600">未同步</span>
+        </div>
+        <div>
+            <span class="text-sm text-gray-500">时间源:</span>
+            <span id="time-source" class="text-sm text-gray-600">
+                <span class="status-indicator status-disconnected"></span>未同步
+            </span>
+        </div>
+        <div>
+            <span class="text-sm text-gray-500">PCF8563状态:</span>
+            <span id="pcf-status" class="text-sm text-gray-600">
+                <span class="status-indicator status-disconnected"></span>未检测到
+            </span>
         </div>
     </div>
+</div>
 
-    <!-- NTP服务器配置 -->
-    <form id="ntpForm" class="space-y-6 mb-8">
+<!-- 时间设置表单 -->
+<form id="timeForm" class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
             <label for="ntpServer" class="block text-sm font-medium text-gray-700 mb-1">NTP服务器</label>
-            <input type="text" id="ntpServer" name="ntpServer" value="pool.ntp.org"
+            <input type="text" id="ntpServer" name="ntpServer" placeholder="pool.ntp.org"
                    class="form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-            <p class="mt-1 text-xs text-gray-500">常用NTP服务器: pool.ntp.org, cn.ntp.org.cn, ntp.aliyun.com</p>
         </div>
-
         <div>
-            <label for="timezone" class="block text-sm font-medium text-gray-700 mb-1">时区偏移 (小时)</label>
-            <input type="number" id="timezone" name="timezone" value="8" min="-12" max="12" step="0.5"
+            <label for="timezone" class="block text-sm font-medium text-gray-700 mb-1">时区 (小时)</label>
+            <input type="number" id="timezone" name="timezone" value="8" min="-12" max="12"
                    class="form-input block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-            <p class="mt-1 text-xs text-gray-500">例如: 中国为+8，UTC为0</p>
-        </div>
-
-        <div class="flex space-x-4">
-            <button type="submit" id="syncNtpBtn"
-                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center">
-                <i class="fa fa-refresh mr-2"></i> NTP服务器对时
-            </button>
-            <button type="button" id="syncBrowserBtn"
-                    class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center">
-                <i class="fa fa-desktop mr-2"></i> 同步浏览器时间
-            </button>
-        </div>
-    </form>
-
-    <!-- PCF8563状态 -->
-    <div class="control-card bg-white border border-gray-200 rounded-lg p-4 transition-all duration-200">
-        <h2 class="text-lg font-semibold text-gray-800 mb-3">PCF8563 实时时钟</h2>
-        <div class="grid grid-cols-2 gap-4 text-sm">
-            <div>
-                <span class="text-gray-500">模块状态:</span>
-                <span id="pcf-status" class="font-medium text-gray-900">未检测到</span>
-            </div>
-            <div>
-                <span class="text-gray-500">最后同步时间:</span>
-                <span id="last-sync-time" class="font-medium text-gray-900">从未</span>
-            </div>
+            <p class="mt-1 text-xs text-gray-500">例如：中国为+8，美国纽约为-4</p>
         </div>
     </div>
 
-    <!-- 状态信息 -->
-    <div id="time-status" class="mt-4 p-3 rounded-md hidden"></div>
-
-    <!-- 同步进度 -->
-    <div id="time-sync-progress" class="mt-4 hidden">
-        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div id="time-sync-bar" class="h-full bg-green-500 rounded-full" style="width: 0%"></div>
+    <div class="bg-gray-50 p-4 rounded-lg">
+        <h3 class="text-sm font-medium text-gray-800 mb-3">浏览器本地时间</h3>
+        <div class="text-gray-700 mb-2">
+            <span id="browser-time" class="font-medium"></span>
         </div>
-        <p id="time-sync-text" class="text-xs text-gray-500 mt-1">同步中...</p>
+        <p class="text-xs text-gray-500">点击"从浏览器同步"将使用当前浏览器时间更新设备时钟</p>
     </div>
+
+    <div class="flex space-x-4 pt-2">
+        <button type="button" id="sync-browser-btn"
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center">
+            <i class="fa fa-desktop mr-2"></i> 从浏览器同步
+        </button>
+        <button type="button" id="sync-ntp-btn"
+                class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 flex items-center justify-center">
+            <i class="fa fa-clock-o mr-2"></i> 从NTP服务器同步
+        </button>
+    </div>
+</form>
+
+<!-- 状态信息 -->
+<div id="time-status" class="mt-4 p-3 rounded-md hidden"></div>
+
+<!-- 同步进度 -->
+<div id="time-sync-progress" class="mt-4 hidden">
+    <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div id="time-sync-progress-bar" class="h-full bg-green-500 rounded-full" style="width: 0%"></div>
+    </div>
+    <p id="time-sync-progress-text" class="text-xs text-gray-500 mt-1">同步中...</p>
+</div>
 </div>
 )rawliteral"
 #endif
@@ -671,6 +673,8 @@ const char index_html[] PROGMEM =
                     initFanPage();
                 } else if (tabId === 'ota') {
                     initOtaPage();
+                } else if (tabId === 'time') {
+                    initTimePage();
                 }
             });
         });
@@ -1375,174 +1379,211 @@ const char index_html[] PROGMEM =
 #endif  // ENABLE_FAN
 
 
-#ifdef ENABLE_RTC
+#ifdef ENABLE_RTC_PCF8563
     R"rawliteral(
-// 时间设置页面初始化
+// 时间设置页面功能
 function initTimePage() {
-    // 加载时获取当前时间信息
+    // 显示浏览器当前时间
+    updateBrowserTime();
+    setInterval(updateBrowserTime, 1000);
+
+    // 获取时间信息
     fetchTimeInfo();
 
-    // 定时刷新时间信息
-    timers.time = setInterval(fetchTimeInfo, 1000);
+    // 启动设备时间更新定时器
+    timers.time = setInterval(updateDeviceTimeDisplay, 1000);
 
-    // NTP同步表单提交
-    document.getElementById('ntpForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        syncWithNTP();
-    });
+    // 从浏览器同步时间
+    document.getElementById('sync-browser-btn').addEventListener('click', syncTimeFromBrowser);
 
-    // 同步浏览器时间按钮
-    document.getElementById('syncBrowserBtn').addEventListener('click', syncWithBrowserTime);
+    // 从NTP同步时间
+    document.getElementById('sync-ntp-btn').addEventListener('click', syncTimeFromNTP);
+}
+
+// 更新浏览器时间显示
+function updateBrowserTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString();
+    const dateStr = now.toLocaleDateString();
+    document.getElementById('browser-time').textContent = `${dateStr} ${timeStr}`;
+}
+
+// 设备时间显示自增更新
+function updateDeviceTimeDisplay() {
+    const timeElem = document.getElementById('device-time');
+    const dateElem = document.getElementById('device-date');
+
+    if (timeElem.dataset.timestamp) {
+        const timestamp = parseInt(timeElem.dataset.timestamp) + 1000;
+        timeElem.dataset.timestamp = timestamp;
+
+        const date = new Date(timestamp);
+        timeElem.textContent = date.toLocaleTimeString();
+        dateElem.textContent = date.toLocaleDateString();
+    }
 }
 
 // 获取时间信息
 function fetchTimeInfo() {
-    fetch('/time-info')
-        .then(response => response.json())
-        .then(data => {
-            // 更新设备时间显示
-            document.getElementById('device-time').textContent = data.time;
-            document.getElementById('device-date').textContent = data.date;
-            document.getElementById('time-source').textContent = data.source;
-
-            // 更新时间状态指示器
-            const indicator = document.getElementById('time-status-indicator');
-            indicator.className = 'status-indicator';
-
-            if (data.status === 'synced') {
-                indicator.classList.add('status-connected');
-                document.getElementById('time-status-text').textContent = '已同步';
-            } else if (data.status === 'syncing') {
-                indicator.classList.add('status-scanning');
-                document.getElementById('time-status-text').textContent = '同步中';
-            } else {
-                indicator.classList.add('status-disconnected');
-                document.getElementById('time-status-text').textContent = '未同步';
+    fetch('/pfc8563-time-info')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('获取时间信息失败');
             }
-
-            // 更新PCF8563状态
-            document.getElementById('pcf-status').textContent = data.pcfDetected ? '已检测到' : '未检测到';
-            document.getElementById('last-sync-time').textContent = data.lastSync || '从未';
-
-            // 更新NTP服务器和时区
-            if (!document.activeElement || document.activeElement.tagName !== 'INPUT') {
-                document.getElementById('ntpServer').value = data.ntpServer || 'pool.ntp.org';
-                document.getElementById('timezone').value = data.timezone || 8;
-            }
+            return response.json();
         })
-        .catch(error => console.error('获取时间信息失败:', error));
+        .then(data => {
+            updateTimeInfoDisplay(data);
+        })
+        .catch(error => {
+            console.error('获取时间信息失败:', error);
+            showStatus('time-status', '获取时间信息失败', 'error');
+        });
 }
 
-// NTP服务器对时
-function syncWithNTP() {
-    const ntpServer = document.getElementById('ntpServer').value;
-    const timezone = parseFloat(document.getElementById('timezone').value);
+// 更新时间信息显示
+function updateTimeInfoDisplay(data) {
+    // 设置设备时间
+    const timeElem = document.getElementById('device-time');
+    const dateElem = document.getElementById('device-date');
 
-    showTimeSyncProgress();
+    if (data.time) {
+        const [dateStr, timeStr] = data.time.split(' ');
+        timeElem.textContent = timeStr;
+        dateElem.textContent = dateStr;
 
-    fetch('/sync-ntp', {
+        // 转换为时间戳用于自增显示
+        const timestamp = new Date(data.time).getTime();
+        timeElem.dataset.timestamp = timestamp;
+    }
+
+    // 更新最后同步时间
+    document.getElementById('last-sync-time').textContent = data.lastSync || '未同步';
+
+    // 更新时间源状态
+    const timeSourceElem = document.getElementById('time-source');
+    if (data.source) {
+        timeSourceElem.innerHTML = '<span class="status-indicator status-connected"></span>已同步';
+    } else {
+        timeSourceElem.innerHTML = '<span class="status-indicator status-disconnected"></span>未同步';
+    }
+
+    // 更新PCF8563状态
+    const pcfStatusElem = document.getElementById('pcf-status');
+    if (data.pcf_detected) {
+        pcfStatusElem.innerHTML = '<span class="status-indicator status-connected"></span>已检测到';
+    } else {
+        pcfStatusElem.innerHTML = '<span class="status-indicator status-disconnected"></span>未检测到';
+    }
+
+    // 填充NTP服务器和时区
+    if (data.ntpServer) {
+        document.getElementById('ntpServer').value = data.ntpServer;
+    }
+    if (data.timezone) {
+        document.getElementById('timezone').value = data.timezone;
+    }
+}
+
+// 从浏览器同步时间
+function syncTimeFromBrowser() {
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+    const timeStr = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+    const datetime = `${dateStr} ${timeStr}`;
+    const timezone = parseInt(document.getElementById('timezone').value) || 8;
+
+    // 显示进度
+    showTimeSyncProgress(30);
+
+    fetch('/pfc8563-sync-browser', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ntpServer, timezone })
+        body: JSON.stringify({ time: datetime, timezone: timezone })
     })
-    .then(response => response.json())
-    .then(data => {
-        updateTimeStatus(data.success, data.message);
-        if (data.success) {
-            // 同步成功后刷新时间信息
-            setTimeout(fetchTimeInfo, 1000);
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('同步时间失败');
         }
+        return response.json();
+    })
+    .then(data => {
+        showTimeSyncProgress(100);
+
+        if (data.status) {
+            showStatus('time-status', '从浏览器同步时间成功', 'success');
+            fetchTimeInfo(); // 重新获取时间信息
+        } else {
+            showStatus('time-status', '同步时间失败', 'error');
+        }
+
+        // 隐藏进度条
+        setTimeout(() => {
+            document.getElementById('time-sync-progress').classList.add('hidden');
+        }, 1000);
     })
     .catch(error => {
-        updateTimeStatus(false, '同步失败: 网络错误');
+        console.error('同步时间失败:', error);
+        showStatus('time-status', '同步时间失败', 'error');
+        document.getElementById('time-sync-progress').classList.add('hidden');
     });
 }
 
-// 同步浏览器时间
-function syncWithBrowserTime() {
-    const now = new Date();
-    const timezone = parseFloat(document.getElementById('timezone').value) || 8;
+// 从NTP同步时间
+function syncTimeFromNTP() {
+    const ntpServer = document.getElementById('ntpServer').value || 'pool.ntp.org';
+    const timezone = parseInt(document.getElementById('timezone').value) || 8;
 
-    // 准备时间数据
-    const timeData = {
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
-        day: now.getDate(),
-        hour: now.getHours(),
-        minute: now.getMinutes(),
-        second: now.getSeconds(),
-        timezone: timezone
-    };
+    // 显示进度
+    showTimeSyncProgress(30);
 
-    showTimeSyncProgress();
-
-    fetch('/sync-browser', {
+    fetch('/pfc8563-sync-ntp', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(timeData)
+        body: JSON.stringify({ ntpServer: ntpServer, timezone: timezone })
     })
-    .then(response => response.json())
-    .then(data => {
-        updateTimeStatus(data.success, data.message);
-        if (data.success) {
-            // 同步成功后刷新时间信息
-            setTimeout(fetchTimeInfo, 1000);
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('从NTP同步时间失败');
         }
+        return response.json();
+    })
+    .then(data => {
+        showTimeSyncProgress(100);
+
+        if (data.status) {
+            showStatus('time-status', '从NTP服务器同步时间成功', 'success');
+            fetchTimeInfo(); // 重新获取时间信息
+        } else {
+            showStatus('time-status', '从NTP服务器同步时间失败', 'error');
+        }
+
+        // 隐藏进度条
+        setTimeout(() => {
+            document.getElementById('time-sync-progress').classList.add('hidden');
+        }, 1000);
     })
     .catch(error => {
-        updateTimeStatus(false, '同步失败: 网络错误');
+        console.error('从NTP同步时间失败:', error);
+        showStatus('time-status', '从NTP服务器同步时间失败', 'error');
+        document.getElementById('time-sync-progress').classList.add('hidden');
     });
 }
 
 // 显示时间同步进度
-function showTimeSyncProgress() {
+function showTimeSyncProgress(percent) {
     const progressContainer = document.getElementById('time-sync-progress');
-    const progressBar = document.getElementById('time-sync-bar');
-    const statusDiv = document.getElementById('time-status');
+    const progressBar = document.getElementById('time-sync-progress-bar');
 
-    statusDiv.classList.add('hidden');
     progressContainer.classList.remove('hidden');
-    progressBar.style.width = '30%';
-}
-
-// 更新时间同步状态
-function updateTimeStatus(success, message) {
-    const progressContainer = document.getElementById('time-sync-progress');
-    const progressBar = document.getElementById('time-sync-bar');
-    const statusDiv = document.getElementById('time-status');
-
-    if (success) {
-        progressBar.style.width = '100%';
-        setTimeout(() => {
-            progressContainer.classList.add('hidden');
-            statusDiv.className = 'mt-4 p-3 rounded-md bg-green-50 text-green-800';
-            statusDiv.textContent = message;
-            statusDiv.classList.remove('hidden');
-
-            // 3秒后隐藏成功消息
-            setTimeout(() => {
-                statusDiv.classList.add('hidden');
-            }, 3000);
-        }, 500);
-    } else {
-        progressContainer.classList.add('hidden');
-        statusDiv.className = 'mt-4 p-3 rounded-md bg-red-50 text-red-800';
-        statusDiv.textContent = message;
-        statusDiv.classList.remove('hidden');
-    }
-}
-
-// 在标签切换逻辑中添加时间页面的初始化
-// 在现有标签切换代码中添加：
-else if (tabId === 'time') {
-    initTimePage();
+    progressBar.style.width = `${percent}%`;
 }
 )rawliteral"
-#endif  // ENABLE_RTC
+#endif  // ENABLE_RTC_PCF8563
 
 #ifdef ENABLE_OTA
     R"rawliteral(

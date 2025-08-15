@@ -7,27 +7,22 @@
  *
  */
 
-#ifndef ESP_UTILITY_RTC_H
-#define ESP_UTILITY_RTC_H
-//#ifdef ENABLE_RTC
+#ifndef ESP_UTILITY_RTC_PCF8563_H
+#define ESP_UTILITY_RTC_PCF8563_H
+//#ifdef ENABLE_RTC_PCF8563
 #include "precompiled.h"
 
 #include <ESP8266WebServer.h>
 namespace esp_utility
 {
-class rtc
+class rtc_pcf8563
 {
-    SINGLE_TPL(rtc);
+    SINGLE_TPL(rtc_pcf8563);
 
 public:
     void begin(ESP8266WebServer& server);
     void update();
-private:
-    String        getWeekday(int weekday);
-
-private:
-    bool          _pcf_detected;
 };
 }
-//#endif // ENABLE_RTC
+//#endif // ESP_UTILITY_RTC_PCF8563_H
 #endif  // ESP_UTILITY_RTC_H

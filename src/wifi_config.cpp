@@ -8,7 +8,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 
-// è¿æ¥è¶…æ—¶è®¾ç½®
+// Á¬½Ó³¬Ê±ÉèÖÃ
 #define WIFI_CONNECT_TIMEOUT 30000
 #define WIFI_AP_PREFIX "AK_"
 #define WIFI_AP_PASSWD "liuqingquan"
@@ -33,22 +33,22 @@ bool wifi_config::try_connect()
 
         Println("wifi ssid: %s", config::getInstance()._config.wifi_config.ssid);
         Println("wifi passphrase: %s", config::getInstance()._config.wifi_config.passphrase);
-        // è¿æ¥WiFi
+        // Á¬½ÓWiFi
         WiFi.begin(config::getInstance()._config.wifi_config.ssid,
                    config::getInstance()._config.wifi_config.passphrase);
 
-        // ç­‰å¾…è¿æ¥ï¼Œè¶…æ—¶åˆ™è¿›å…¥APæ¨¡å¼
+        // µÈ´ıÁ¬½Ó£¬³¬Ê±Ôò½øÈëAPÄ£Ê½
         while (WiFi.status() != WL_CONNECTED && (!_esp.hasExpired(WIFI_CONNECT_TIMEOUT)))
         {
             delay(500);
             Print(".");
         }
 
-        // æ£€æŸ¥è¿æ¥çŠ¶æ€
+        // ¼ì²éÁ¬½Ó×´Ì¬
         if (WiFi.status() == WL_CONNECTED)
         {
             Println("");
-            Println("WiFiè¿æ¥æˆåŠŸ, IPåœ°å€: %s", WiFi.localIP().toString().c_str());
+            Println("WiFiÁ¬½Ó³É¹¦, IPµØÖ·: %s", WiFi.localIP().toString().c_str());
         }
     }
     return WiFi.status() == WL_CONNECTED;
@@ -62,14 +62,14 @@ void wifi_config::try_config()
     address.replace(":", "");
     String ssid = WIFI_AP_PREFIX + address.substring(6);
 
-    // é…ç½®APæ¨¡å¼
+    // ÅäÖÃAPÄ£Ê½
     WiFi.mode(WIFI_AP_STA);
     WiFi.softAP(ssid.c_str(), WIFI_AP_PASSWD);
 
     Println("AP name: %s", ssid.c_str());
     Println("AP IP address: %s", WiFi.softAPIP().toString().c_str());
 
-    // å¯åŠ¨ captive portal (å¼ºåˆ¶é—¨æˆ·)
+    // Æô¶¯ captive portal (Ç¿ÖÆÃÅ»§)
     if (!MDNS.begin("Arkss"))
     {
         Println("MDNS start failed");
@@ -87,12 +87,12 @@ void wifi_config::begin(ESP8266WebServer& server)
         try_config();
     }
 
-    // å¯åŠ¨WebæœåŠ¡å™¨ï¼ˆé…ç½‘æ¨¡å¼ï¼‰
+    // Æô¶¯Web·şÎñÆ÷£¨ÅäÍøÄ£Ê½£©
     server.on("/wifi-scan", [&]() {
-        // å¤„ç†WiFiæ‰«æè¯·æ±‚
-        Serial.println("æ‰«æWiFiç½‘ç»œ...");
+        // ´¦ÀíWiFiÉ¨ÃèÇëÇó
+        Serial.println("É¨ÃèWiFiÍøÂç...");
 
-        // æ‰«æç½‘ç»œ
+        // É¨ÃèÍøÂç
         int n = WiFi.scanNetworks(false, true);
         _scan_results.clear();
 
@@ -107,7 +107,7 @@ void wifi_config::begin(ESP8266WebServer& server)
             {
                 json += "{\"ssid\":\"" + WiFi.SSID(i) + "\",\"rssi\":" + WiFi.RSSI(i) + ",\"encryption\":\"";
 
-                // ç¡®å®šåŠ å¯†ç±»å‹
+                // È·¶¨¼ÓÃÜÀàĞÍ
                 switch (WiFi.encryptionType(i))
                 {
                 case ENC_TYPE_NONE:
@@ -139,19 +139,19 @@ void wifi_config::begin(ESP8266WebServer& server)
             server.send(200, "application/json", json);
         }
 
-        // æ¸…é™¤æ‰«æç»“æœï¼Œä¸ºä¸‹ä¸€æ¬¡æ‰«æåšå‡†å¤‡
+        // Çå³ıÉ¨Ãè½á¹û£¬ÎªÏÂÒ»´ÎÉ¨Ãè×ö×¼±¸
         WiFi.scanDelete();
     });
 
     server.on("/wifi-connect", [&]() {
-        // å¤„ç†è¿æ¥WiFiè¯·æ±‚
+        // ´¦ÀíÁ¬½ÓWiFiÇëÇó
         if (server.method() != HTTP_POST)
         {
             server.send(405, "text/plain", "Method Not Allowed");
             return;
         }
 
-        // è§£æè¯·æ±‚ä½“
+        // ½âÎöÇëÇóÌå
         String               requestBody = server.arg("plain");
         JsonDocument  doc;
         DeserializationError error = deserializeJson(doc, requestBody);
@@ -162,7 +162,7 @@ void wifi_config::begin(ESP8266WebServer& server)
             return;
         }
 
-        // æå–SSIDå’Œå¯†ç 
+        // ÌáÈ¡SSIDºÍÃÜÂë
         String ssid     = doc["ssid"].as<String>();
         String password = doc["password"].as<String>();
 
@@ -172,7 +172,7 @@ void wifi_config::begin(ESP8266WebServer& server)
             return;
         }
 
-        // ä¿å­˜é…ç½®
+        // ±£´æÅäÖÃ
         config::getInstance()._config.has_wifi_config = true;
         memcpy(config::getInstance()._config.wifi_config.ssid,ssid.c_str(), ssid.length());
         memcpy(config::getInstance()._config.wifi_config.passphrase, password.c_str(), password.length());
@@ -189,7 +189,7 @@ void wifi_config::begin(ESP8266WebServer& server)
     });
 
     server.on("/wifi-connection-status", [&]() {
-        // å¤„ç†è¿æ¥çŠ¶æ€è¯·æ±‚
+        // ´¦ÀíÁ¬½Ó×´Ì¬ÇëÇó
         String json = "{\"connected\":";
         json += (WiFi.status() == WL_CONNECTED);
         json += ",\"status\":";
@@ -199,7 +199,7 @@ void wifi_config::begin(ESP8266WebServer& server)
     });
 
     server.on("/wifi-device-info", [&]() {
-        // å¤„ç†è®¾å¤‡ä¿¡æ¯è¯·æ±‚
+        // ´¦ÀíÉè±¸ĞÅÏ¢ÇëÇó
         String json;
         json+="{\"name\":\"ESP-config\",\"mac\":\"";
         json+=WiFi.macAddress();
@@ -231,7 +231,7 @@ void wifi_config::begin(ESP8266WebServer& server)
     });
 
     server.on("/wifi-success", [&]() {
-        // å¤„ç†é…ç½®æˆåŠŸé¡µé¢
+        // ´¦ÀíÅäÖÃ³É¹¦Ò³Ãæ
         String json = "{\"ip\":\"" + WiFi.localIP().toString() + "\"}";
         server.send(200, "application/json", json);
     });
@@ -246,10 +246,10 @@ void wifi_config::update()
 {
     if (WiFi.getMode() == WIFI_AP_STA)
     {
-        // å®šæœŸå¤„ç†mDNSè¯·æ±‚
+        // ¶¨ÆÚ´¦ÀímDNSÇëÇó
         MDNS.update();
 
-        // å¦‚æœåœ¨APæ¨¡å¼ä¸‹æˆåŠŸè¿æ¥åˆ°WiFiï¼Œåˆ™é‡å¯
+        // Èç¹ûÔÚAPÄ£Ê½ÏÂ³É¹¦Á¬½Óµ½WiFi£¬ÔòÖØÆô
         if (WiFi.getMode() == WIFI_AP_STA && WiFi.status() == WL_CONNECTED)
         {
             ESP.restart();
