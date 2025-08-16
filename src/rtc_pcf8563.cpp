@@ -21,6 +21,7 @@ const unsigned long SYNC_INTERVAL = 24 * 60 * 60 * 1000;
 
 void                rtc_pcf8563::create()
 {
+    _time_synced = false;
 }
 
 void rtc_pcf8563::destory()
@@ -59,6 +60,7 @@ bool rtc_pcf8563::parse_and_set_time(String& time_buf)
     {
         Println("设置时间到PCF8563: %d-%d-%d %d:%d:%d", year, month, day, hour, minute, second);
         _rtc.setDateTime(year, month, day, hour, minute, second);
+        _time_synced = true;
         return true;
     }
 
@@ -85,7 +87,8 @@ bool rtc_pcf8563::sync_time_from_ntp()
 
 
     if (timeClient.getEpochTime() > 1600000000)
-    {  // 检查是否获取到有效时间
+    {
+        // 检查是否获取到有效时间
         time_t     epochTime = timeClient.getEpochTime();
         struct tm* timeinfo  = localtime(&epochTime);
 
@@ -102,8 +105,10 @@ bool rtc_pcf8563::sync_time_from_ntp()
             Println("设置时间到PCF8563: %d-%d-%d %d:%d:%d", year, month, day, hour, minute, second);
             _rtc.setDateTime(year, month, day, hour, minute, second);
 
+            _time_synced = true;
+
             // 同步系统时间到RTC
-            _rtc.syncToRtc();
+            //_rtc.syncToRtc();
         }
 
         // 更新状态信息
@@ -116,6 +121,49 @@ bool rtc_pcf8563::sync_time_from_ntp()
         return true;
     }
     return false;
+}
+
+String rtc_pcf8563::format_number(int number, int width)
+{
+    String result    = "";
+    int    numDigits = 0;
+
+    // 计算数字的位数
+    int    temp      = number;
+    if (temp == 0)
+    {
+        numDigits = 1;
+    }
+    else
+    {
+        while (temp != 0)
+        {
+            temp /= 10;
+            numDigits++;
+        }
+    }
+
+    // 补充前导零
+    for (int i = numDigits; i < width; i++)
+    {
+        result += "0";
+    }
+
+    // 添加数字本身
+    result += String(number);
+
+    return result;
+}
+
+String rtc_pcf8563::get_datetime()
+{
+    RTC_Date time = _rtc.getDateTime();
+    return format_number(time.year, 4) + "-" +
+           format_number(time.month) + "-" +
+           format_number(time.day) + " " +
+           format_number(time.hour) + ":" +
+           format_number(time.minute) + ":" +
+           format_number(time.second);
 }
 
 void rtc_pcf8563::begin(ESP8266WebServer& server)
@@ -153,21 +201,11 @@ void rtc_pcf8563::begin(ESP8266WebServer& server)
 
     server.on("/pcf8563-time-info", HTTP_GET, [&]() {
         String json = "{\"time\":\"";
+
+        // 更新PCF8563
         if (_pcf_detected)
         {
-            RTC_Date now = _rtc.getDateTime();
-
-            json += String(now.year);
-            json += "-";
-            json += String(now.month);
-            json += "-";
-            json += String(now.day);
-            json += " ";
-            json += String(now.hour);
-            json += ":";
-            json += String(now.minute);
-            json += ":";
-            json += String(now.second);
+            json += get_datetime();
         }
         else
         {
@@ -175,13 +213,13 @@ void rtc_pcf8563::begin(ESP8266WebServer& server)
         }
 
         json += "\",\"source\":";
-        json += _time_synced;
+        json += _time_synced ? "true" : "false";
         json += ",\"status\":true,\"pcfDetected\":";
         json += _pcf_detected;
         json += ",\"lastSync\":\"";
         json += _last_sync_time;
         json += "\",\"ntpServer\":\"";
-        json += reinterpret_cast<const char *>(config::getInstance()._config.rtc_config.ntp_server.bytes);
+        json += reinterpret_cast<const char*>(config::getInstance()._config.rtc_config.ntp_server.bytes);
         json += "\",\"timezone\":";
         json += config::getInstance()._config.rtc_config.timezone;
         json += "}";

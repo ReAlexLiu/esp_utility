@@ -1384,28 +1384,43 @@ const char index_html[] PROGMEM =
 // 时间设置页面功能
 function initTimePage() {
     // 显示浏览器当前时间
-    updateBrowserTime();
-    setInterval(updateBrowserTime, 1000);
+updateBrowserTime();
+setInterval(updateBrowserTime, 1000);
 
-    // 获取时间信息
-    fetchTimeInfo();
+// 获取时间信息
+fetchTimeInfo();
 
-    // 启动设备时间更新定时器
-    timers.time = setInterval(updateDeviceTimeDisplay, 1000);
+// 启动设备时间更新定时器
+timers.time = setInterval(updateDeviceTimeDisplay, 1000);
 
-    // 从浏览器同步时间
-    document.getElementById('sync-browser-btn').addEventListener('click', syncTimeFromBrowser);
+// 添加定时获取时间信息的定时器（60秒一次）
+timers.timeInfo = setInterval(fetchTimeInfo, 30000);
 
-    // 从NTP同步时间
-    document.getElementById('sync-ntp-btn').addEventListener('click', syncTimeFromNTP);
+// 从浏览器同步时间
+document.getElementById('sync-browser-btn').addEventListener('click', syncTimeFromBrowser);
+
+// 从NTP同步时间
+document.getElementById('sync-ntp-btn').addEventListener('click', syncTimeFromNTP);
 }
 
 // 更新浏览器时间显示
 function updateBrowserTime() {
+    //const now = new Date();
+    //const timeStr = now.toLocaleTimeString();
+    //const dateStr = now.toLocaleDateString();
+    //document.getElementById('browser-time').textContent = `${dateStr} ${timeStr}`;
+
     const now = new Date();
-    const timeStr = now.toLocaleTimeString();
-    const dateStr = now.toLocaleDateString();
-    document.getElementById('browser-time').textContent = `${dateStr} ${timeStr}`;
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1; // 月份从0开始，需要+1
+    const day = now.getDate();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
+
+    // 格式化为 "2025-8-16 12:55:51" 形式
+    const timeStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    document.getElementById('browser-time').textContent = timeStr;
 }
 
 // 设备时间显示自增更新
@@ -1419,7 +1434,12 @@ function updateDeviceTimeDisplay() {
 
         const date = new Date(timestamp);
         timeElem.textContent = date.toLocaleTimeString();
-        dateElem.textContent = date.toLocaleDateString();
+        //dateElem.textContent = date.toLocaleDateString();
+        // 格式化日期为 YYYY-MM-DD
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0'); // 月份从0开始，需+1
+        const day = date.getDate().toString().padStart(2, '0');
+        dateElem.textContent = `${year}-${month}-${day}`;
     }
 }
 

@@ -28,6 +28,8 @@ private:
     bool parse_and_set_time(String& time_buf);
     bool sync_time_from_ntp();
     void check_time_sync();
+    String format_number(int number, int width = 2);
+String  get_datetime();
 
 private:
     bool          _pcf_detected;
