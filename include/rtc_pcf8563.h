@@ -9,7 +9,7 @@
 
 #ifndef ESP_UTILITY_RTC_PCF8563_H
 #define ESP_UTILITY_RTC_PCF8563_H
-// #ifdef ENABLE_RTC_PCF8563
+#ifdef ENABLE_RTC_PCF8563
 #include "precompiled.h"
 
 #include <ESP8266WebServer.h>
@@ -25,11 +25,11 @@ public:
     void update();
 
 private:
-    bool parse_and_set_time(String& time_buf);
-    bool sync_time_from_ntp();
-    void check_time_sync();
+    bool   parse_and_set_time(String& time_buf);
+    bool   sync_time_from_ntp();
+    void   check_time_sync();
     String format_number(int number, int width = 2);
-String  get_datetime();
+    String get_datetime();
 
 private:
     bool          _pcf_detected;
@@ -39,5 +39,5 @@ private:
     unsigned long _last_sync_millis;
 };
 }
-// #endif // ESP_UTILITY_RTC_PCF8563_H
+#endif // ESP_UTILITY_RTC_PCF8563_H
 #endif  // ESP_UTILITY_RTC_H

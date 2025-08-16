@@ -1,6 +1,6 @@
 #include "rtc_pcf8563.h"
 
-// #ifdef ENABLE_RTC_PCF8563
+#ifdef ENABLE_RTC_PCF8563
 
 #include "Config.h"
 
@@ -298,4 +298,4 @@ void rtc_pcf8563::update()
     check_time_sync();
 }
 }  // namespace esp_utility
-// #endif // ENABLE_RTC_PCF8563
+#endif  // ENABLE_RTC_PCF8563

@@ -212,7 +212,149 @@
                 </div>
             </div>
         </div>
+<!-- IO控制标签内容 -->
+<div id="io-content" class="tab-content p-6">
+    <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">IO输出控制</h1>
 
+    <!-- 配置说明卡片 -->
+    <div class="flash-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 transition-all duration-200">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">IO输出控制</h2>
+        <p class="text-sm text-gray-600">
+            在此页面控制4路IO输出的开关状态。点击开关按钮切换状态，系统会自动保存配置。
+            <span class="inline-flex items-center ml-2"><span class="status-indicator status-connected"></span>开启</span>
+            <span class="inline-flex items-center ml-2"><span class="status-indicator status-disconnected"></span>关闭</span>
+        </p>
+    </div>
+
+    <!-- IO控制表格 -->
+    <div class="overflow-x-auto mb-6">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+            <tr>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                    IO端口
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    当前状态
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    引脚编号
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                    操作
+                </th>
+            </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+            <!-- IO1控制 -->
+            <tr class="sensor-row">
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">IO 1</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm" id="io1-status">
+                        <span class="status-indicator status-disconnected"></span>
+                        <span>关闭</span>
+                    </div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm text-gray-600 font-mono">GPIO5</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="relative inline-block w-12 h-6">
+                        <input type="checkbox" id="io1-toggle"
+                               class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="io1-toggle"
+                               class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- IO2控制 -->
+            <tr class="sensor-row">
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">IO 2</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm" id="io2-status">
+                        <span class="status-indicator status-disconnected"></span>
+                        <span>关闭</span>
+                    </div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm text-gray-600 font-mono">GPIO13</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="relative inline-block w-12 h-6">
+                        <input type="checkbox" id="io2-toggle"
+                               class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="io2-toggle"
+                               class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- IO3控制 -->
+            <tr class="sensor-row">
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">IO 3</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm" id="io3-status">
+                        <span class="status-indicator status-disconnected"></span>
+                        <span>关闭</span>
+                    </div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm text-gray-600 font-mono">GPIO12</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="relative inline-block w-12 h-6">
+                        <input type="checkbox" id="io3-toggle"
+                               class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="io3-toggle"
+                               class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- IO4控制 -->
+            <tr class="sensor-row">
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">IO 4</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm" id="io4-status">
+                        <span class="status-indicator status-disconnected"></span>
+                        <span>关闭</span>
+                    </div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm text-gray-600 font-mono">GPIO14</div>
+                </td>
+                <td class="px-4 py-4 rounded-br-lg">
+                    <div class="relative inline-block w-12 h-6">
+                        <input type="checkbox" id="io4-toggle"
+                               class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="io4-toggle"
+                               class="toggle-label block overflow-hidden h-6 rounded rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-end">
+        <button id="refresh-io-status"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition duration-200 flex items-center">
+            <i class="fa fa-refresh mr-1"></i> 刷新状态
+        </button>
+    </div>
+
+    <!-- 状态提示 -->
+    <div id="io-status" class="mt-4 p-3 rounded-md hidden"></div>
+</div>
 
         <!-- DS18B20配置标签内容 -->
         <div id="ds18b20-content" class="tab-content p-6">

@@ -110,6 +110,9 @@ const char index_html[] PROGMEM =
 #ifdef ENABLE_FAN
     R"rawliteral(<div class="tab-button px-6 py-4 text-gray-700" data-tab="fan">风扇配置</div>)rawliteral"
 #endif
+#ifdef ENABLE_LIGHT
+    R"rawliteral(<div class="tab-button px-6 py-4 text-gray-700" data-tab="io">灯光控制</div>)rawliteral"
+#endif
 #ifdef ENABLE_RTC_PCF8563
     R"rawliteral(<div class="tab-button px-6 py-4 text-gray-700" data-tab="time">时钟/时间设置</div>)rawliteral"
 #endif
@@ -497,6 +500,154 @@ const char index_html[] PROGMEM =
 )rawliteral"
 #endif  // ENABLE_FAN
 
+#ifdef ENABLE_LIGHT
+    R"rawliteral(
+<!-- IO控制标签内容 -->
+<div id="io-content" class="tab-content p-6">
+    <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">IO输出控制</h1>
+
+    <!-- 配置说明卡片 -->
+    <div class="flash-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 transition-all duration-200">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">IO输出控制</h2>
+        <p class="text-sm text-gray-600">
+            在此页面控制4路IO输出的开关状态。点击开关按钮切换状态，系统会自动保存配置。
+            <span class="inline-flex items-center ml-2"><span class="status-indicator status-connected"></span>开启</span>
+            <span class="inline-flex items-center ml-2"><span class="status-indicator status-disconnected"></span>关闭</span>
+        </p>
+    </div>
+
+    <!-- IO控制表格 -->
+    <div class="overflow-x-auto mb-6">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+            <tr>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">
+                    IO端口
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    当前状态
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    引脚编号
+                </th>
+                <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">
+                    操作
+                </th>
+            </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+            <!-- IO1控制 -->
+            <tr class="sensor-row">
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">IO 1</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm" id="io1-status">
+                        <span class="status-indicator status-disconnected"></span>
+                        <span>关闭</span>
+                    </div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm text-gray-600 font-mono">GPIO5</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="relative inline-block w-12 h-6">
+                        <input type="checkbox" id="io1-toggle"
+                               class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="io1-toggle"
+                               class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- IO2控制 -->
+            <tr class="sensor-row">
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">IO 2</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm" id="io2-status">
+                        <span class="status-indicator status-disconnected"></span>
+                        <span>关闭</span>
+                    </div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm text-gray-600 font-mono">GPIO13</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="relative inline-block w-12 h-6">
+                        <input type="checkbox" id="io2-toggle"
+                               class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="io2-toggle"
+                               class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- IO3控制 -->
+            <tr class="sensor-row">
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">IO 3</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm" id="io3-status">
+                        <span class="status-indicator status-disconnected"></span>
+                        <span>关闭</span>
+                    </div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm text-gray-600 font-mono">GPIO12</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="relative inline-block w-12 h-6">
+                        <input type="checkbox" id="io3-toggle"
+                               class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="io3-toggle"
+                               class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- IO4控制 -->
+            <tr class="sensor-row">
+                <td class="px-4 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">IO 4</div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm" id="io4-status">
+                        <span class="status-indicator status-disconnected"></span>
+                        <span>关闭</span>
+                    </div>
+                </td>
+                <td class="px-4 py-4">
+                    <div class="text-sm text-gray-600 font-mono">GPIO14</div>
+                </td>
+                <td class="px-4 py-4 rounded-br-lg">
+                    <div class="relative inline-block w-12 h-6">
+                        <input type="checkbox" id="io4-toggle"
+                               class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label for="io4-toggle"
+                               class="toggle-label block overflow-hidden h-6 rounded rounded-full bg-gray-300 cursor-pointer"></label>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-end">
+        <button id="refresh-io-status"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition duration-200 flex items-center">
+            <i class="fa fa-refresh mr-1"></i> 刷新状态
+        </button>
+    </div>
+
+    <!-- 状态提示 -->
+    <div id="io-status" class="mt-4 p-3 rounded-md hidden"></div>
+</div>
+    )rawliteral"
+#endif  // ENABLE_LIGHT
+
 #ifdef ENABLE_RTC_PCF8563
     R"rawliteral(
     <!-- 时钟/时间设置标签内容 -->
@@ -585,7 +736,7 @@ const char index_html[] PROGMEM =
     R"rawliteral(
             <!-- OTA更新标签内容 -->
             <div id="ota-content" class="tab-content p-6">
-                <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">风扇控制器 OTA 更新</h1>
+                <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">OTA 更新</h1>
 
                 <!-- 存储信息卡片 -->
                 <div class="flash-card bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 transition-all duration-200">
@@ -675,7 +826,10 @@ const char index_html[] PROGMEM =
                     initOtaPage();
                 } else if (tabId === 'time') {
                     initTimePage();
-                }
+                }else if(tabId == 'io')
+{
+initIoPage();
+}
             });
         });
 
@@ -1378,6 +1532,110 @@ const char index_html[] PROGMEM =
 )rawliteral"
 #endif  // ENABLE_FAN
 
+#ifdef ENABLE_LIGHT
+    R"rawliteral(
+// IO控制页面功能
+function initIoPage() {
+    // 加载IO状态
+    loadIoStatus();
+
+    // 每5秒刷新一次状态
+    timers.io = setInterval(loadIoStatus, 5000);
+
+    // 绑定开关事件
+    for (let i = 1; i <= 4; i++) {
+        document.getElementById(`io${i}-toggle`).addEventListener('change', function() {
+            const state = this.checked ? 1 : 0;
+            updateIoState(i, state);
+        });
+    }
+
+    // 手动刷新状态
+    document.getElementById('refresh-io-status').addEventListener('click', loadIoStatus);
+}
+
+// 加载IO状态
+function loadIoStatus() {
+    fetch('/io-status')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('获取IO状态失败');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // 更新每个IO的状态
+            for (let i = 1; i <= 4; i++) {
+                const state = data[`io${i}`]?.state === 1;
+
+                // 更新开关状态
+                const toggle = document.getElementById(`io${i}-toggle`);
+                toggle.checked = state;
+                if (state) {
+                    toggle.classList.add('toggle-checked');
+                } else {
+                    toggle.classList.remove('toggle-checked');
+                }
+
+                // 更新状态显示
+                const statusEl = document.getElementById(`io${i}-status`);
+                const indicator = statusEl.querySelector('.status-indicator');
+                const text = statusEl.querySelector('span:last-child');
+
+                if (state) {
+                    indicator.className = 'status-indicator status-connected';
+                    text.textContent = '开启';
+                } else {
+                    indicator.className = 'status-indicator status-disconnected';
+                    text.textContent = '关闭';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('获取IO状态失败:', error);
+            showStatus('io-status', '获取IO状态失败，请重试', 'error');
+        });
+}
+
+// 更新IO状态
+function updateIoState(ioNumber, state) {
+    showStatus('io-status', `正在更新IO${ioNumber}状态...`, 'info');
+
+    fetch(`/io-control?io=${ioNumber}&state=${state}`, { method: 'POST' })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('更新IO状态失败');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showStatus('io-status', `IO${ioNumber}已${state ? '开启' : '关闭'}`, 'success');
+                // 立即更新状态显示
+                const statusEl = document.getElementById(`io${ioNumber}-status`);
+                const indicator = statusEl.querySelector('.status-indicator');
+                const text = statusEl.querySelector('span:last-child');
+
+                if (state) {
+                    indicator.className = 'status-indicator status-connected';
+                    text.textContent = '开启';
+                } else {
+                    indicator.className = 'status-indicator status-disconnected';
+                    text.textContent = '关闭';
+                }
+            } else {
+                throw new Error(data.message || '更新失败');
+            }
+        })
+        .catch(error => {
+            console.error('更新IO状态失败:', error);
+            showStatus('io-status', `更新IO${ioNumber}状态失败: ${error.message}`, 'error');
+            // 恢复开关状态
+            document.getElementById(`io${ioNumber}-toggle`).checked = !state;
+        });
+}
+    )rawliteral"
+#endif  // ENABLE_LIGHT
 
 #ifdef ENABLE_RTC_PCF8563
     R"rawliteral(
