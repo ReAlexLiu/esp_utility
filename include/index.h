@@ -1425,7 +1425,7 @@ function updateDeviceTimeDisplay() {
 
 // 获取时间信息
 function fetchTimeInfo() {
-    fetch('/pfc8563-time-info')
+    fetch('/pcf8563-time-info')
         .then(response => {
             if (!response.ok) {
                 throw new Error('获取时间信息失败');
@@ -1470,7 +1470,7 @@ function updateTimeInfoDisplay(data) {
 
     // 更新PCF8563状态
     const pcfStatusElem = document.getElementById('pcf-status');
-    if (data.pcf_detected) {
+    if (data.pcfDetected) {
         pcfStatusElem.innerHTML = '<span class="status-indicator status-connected"></span>已检测到';
     } else {
         pcfStatusElem.innerHTML = '<span class="status-indicator status-disconnected"></span>未检测到';
@@ -1496,7 +1496,7 @@ function syncTimeFromBrowser() {
     // 显示进度
     showTimeSyncProgress(30);
 
-    fetch('/pfc8563-sync-browser', {
+    fetch('/pcf8563-sync-browser', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -1539,7 +1539,7 @@ function syncTimeFromNTP() {
     // 显示进度
     showTimeSyncProgress(30);
 
-    fetch('/pfc8563-sync-ntp', {
+    fetch('/pcf8563-sync-ntp', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

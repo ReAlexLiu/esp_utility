@@ -21,7 +21,7 @@ PB_BIND(RtcConfigMessage, RtcConfigMessage, AUTO)
 PB_BIND(AppsConfigMessage, AppsConfigMessage, AUTO)
 
 
-PB_BIND(ConfigMessage, ConfigMessage, AUTO)
+PB_BIND(ConfigMessage, ConfigMessage, 2)
 
 
 

@@ -2,15 +2,15 @@ syntax = "proto3";
 import "nanopb.proto";
 
 message WiFiConfigMessage {
-    string ssid = 1 [(nanopb).max_size = 16];
-    string passphrase = 2 [(nanopb).max_size = 16];
+    bytes ssid = 1 [(nanopb).max_size = 16];
+    bytes passphrase = 2 [(nanopb).max_size = 16];
 }
 
 message MqttConfigMessage {
-    string mqtt_server = 1 [(nanopb).max_size = 24];
+    bytes mqtt_server = 1 [(nanopb).max_size = 24];
     uint32 mqtt_port = 2;
-    string mqtt_user = 3 [(nanopb).max_size = 16];
-    string mqtt_pass = 4 [(nanopb).max_size = 16];
+    bytes mqtt_user = 3 [(nanopb).max_size = 16];
+    bytes mqtt_pass = 4 [(nanopb).max_size = 16];
 }
 
 message Ds18b20ConfigMessage {
@@ -18,7 +18,7 @@ message Ds18b20ConfigMessage {
     uint32 output_pin = 2;
 }
 message RtcConfigMessage {
-   string ntp_server = 1 [(nanopb).max_size = 32];
+   bytes ntp_server = 1 [(nanopb).max_size = 32];
    uint32 timezone = 2;
 }
 

@@ -10,16 +10,21 @@
 #endif
 
 /* Struct definitions */
+typedef PB_BYTES_ARRAY_T(16) WiFiConfigMessage_ssid_t;
+typedef PB_BYTES_ARRAY_T(16) WiFiConfigMessage_passphrase_t;
 typedef struct _WiFiConfigMessage {
-    char ssid[16];
-    char passphrase[16];
+    WiFiConfigMessage_ssid_t ssid;
+    WiFiConfigMessage_passphrase_t passphrase;
 } WiFiConfigMessage;
 
+typedef PB_BYTES_ARRAY_T(24) MqttConfigMessage_mqtt_server_t;
+typedef PB_BYTES_ARRAY_T(16) MqttConfigMessage_mqtt_user_t;
+typedef PB_BYTES_ARRAY_T(16) MqttConfigMessage_mqtt_pass_t;
 typedef struct _MqttConfigMessage {
-    char mqtt_server[24];
+    MqttConfigMessage_mqtt_server_t mqtt_server;
     uint32_t mqtt_port;
-    char mqtt_user[16];
-    char mqtt_pass[16];
+    MqttConfigMessage_mqtt_user_t mqtt_user;
+    MqttConfigMessage_mqtt_pass_t mqtt_pass;
 } MqttConfigMessage;
 
 typedef PB_BYTES_ARRAY_T(8) Ds18b20ConfigMessage_address_t;
@@ -28,8 +33,9 @@ typedef struct _Ds18b20ConfigMessage {
     uint32_t output_pin;
 } Ds18b20ConfigMessage;
 
+typedef PB_BYTES_ARRAY_T(32) RtcConfigMessage_ntp_server_t;
 typedef struct _RtcConfigMessage {
-    char ntp_server[32];
+    RtcConfigMessage_ntp_server_t ntp_server;
     uint32_t timezone;
 } RtcConfigMessage;
 
@@ -55,16 +61,16 @@ extern "C" {
 #endif
 
 /* Initializer values for message structs */
-#define WiFiConfigMessage_init_default           {"", ""}
-#define MqttConfigMessage_init_default           {"", 0, "", ""}
+#define WiFiConfigMessage_init_default           {{0, {0}}, {0, {0}}}
+#define MqttConfigMessage_init_default           {{0, {0}}, 0, {0, {0}}, {0, {0}}}
 #define Ds18b20ConfigMessage_init_default        {{0, {0}}, 0}
-#define RtcConfigMessage_init_default            {"", 0}
+#define RtcConfigMessage_init_default            {{0, {0}}, 0}
 #define AppsConfigMessage_init_default           {0, {Ds18b20ConfigMessage_init_default, Ds18b20ConfigMessage_init_default, Ds18b20ConfigMessage_init_default, Ds18b20ConfigMessage_init_default}}
 #define ConfigMessage_init_default               {false, WiFiConfigMessage_init_default, false, AppsConfigMessage_init_default, false, MqttConfigMessage_init_default, false, RtcConfigMessage_init_default}
-#define WiFiConfigMessage_init_zero              {"", ""}
-#define MqttConfigMessage_init_zero              {"", 0, "", ""}
+#define WiFiConfigMessage_init_zero              {{0, {0}}, {0, {0}}}
+#define MqttConfigMessage_init_zero              {{0, {0}}, 0, {0, {0}}, {0, {0}}}
 #define Ds18b20ConfigMessage_init_zero           {{0, {0}}, 0}
-#define RtcConfigMessage_init_zero               {"", 0}
+#define RtcConfigMessage_init_zero               {{0, {0}}, 0}
 #define AppsConfigMessage_init_zero              {0, {Ds18b20ConfigMessage_init_zero, Ds18b20ConfigMessage_init_zero, Ds18b20ConfigMessage_init_zero, Ds18b20ConfigMessage_init_zero}}
 #define ConfigMessage_init_zero                  {false, WiFiConfigMessage_init_zero, false, AppsConfigMessage_init_zero, false, MqttConfigMessage_init_zero, false, RtcConfigMessage_init_zero}
 
@@ -87,16 +93,16 @@ extern "C" {
 
 /* Struct field encoding specification for nanopb */
 #define WiFiConfigMessage_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   ssid,              1) \
-X(a, STATIC,   SINGULAR, STRING,   passphrase,        2)
+X(a, STATIC,   SINGULAR, BYTES,    ssid,              1) \
+X(a, STATIC,   SINGULAR, BYTES,    passphrase,        2)
 #define WiFiConfigMessage_CALLBACK NULL
 #define WiFiConfigMessage_DEFAULT NULL
 
 #define MqttConfigMessage_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   mqtt_server,       1) \
+X(a, STATIC,   SINGULAR, BYTES,    mqtt_server,       1) \
 X(a, STATIC,   SINGULAR, UINT32,   mqtt_port,         2) \
-X(a, STATIC,   SINGULAR, STRING,   mqtt_user,         3) \
-X(a, STATIC,   SINGULAR, STRING,   mqtt_pass,         4)
+X(a, STATIC,   SINGULAR, BYTES,    mqtt_user,         3) \
+X(a, STATIC,   SINGULAR, BYTES,    mqtt_pass,         4)
 #define MqttConfigMessage_CALLBACK NULL
 #define MqttConfigMessage_DEFAULT NULL
 
@@ -107,7 +113,7 @@ X(a, STATIC,   SINGULAR, UINT32,   output_pin,        2)
 #define Ds18b20ConfigMessage_DEFAULT NULL
 
 #define RtcConfigMessage_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   ntp_server,        1) \
+X(a, STATIC,   SINGULAR, BYTES,    ntp_server,        1) \
 X(a, STATIC,   SINGULAR, UINT32,   timezone,          2)
 #define RtcConfigMessage_CALLBACK NULL
 #define RtcConfigMessage_DEFAULT NULL
@@ -148,11 +154,11 @@ extern const pb_msgdesc_t ConfigMessage_msg;
 /* Maximum encoded size of messages (where known) */
 #define AppsConfigMessage_size                   72
 #define CONFIG_PB_H_MAX_SIZE                     ConfigMessage_size
-#define ConfigMessage_size                       218
+#define ConfigMessage_size                       224
 #define Ds18b20ConfigMessage_size                16
-#define MqttConfigMessage_size                   65
-#define RtcConfigMessage_size                    39
-#define WiFiConfigMessage_size                   34
+#define MqttConfigMessage_size                   68
+#define RtcConfigMessage_size                    40
+#define WiFiConfigMessage_size                   36
 
 #ifdef __cplusplus
 } /* extern "C" */

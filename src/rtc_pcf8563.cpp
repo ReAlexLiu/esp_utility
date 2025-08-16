@@ -1,6 +1,6 @@
 #include "rtc_pcf8563.h"
 
-//#ifdef ENABLE_RTC_PCF8563
+// #ifdef ENABLE_RTC_PCF8563
 
 #include "Config.h"
 
@@ -14,8 +14,12 @@
 
 namespace esp_utility
 {
+WiFiUDP             ntpUDP;
+NTPClient           timeClient(ntpUDP);
+// 定时同步间隔 (24小时，单位：毫秒)
+const unsigned long SYNC_INTERVAL = 24 * 60 * 60 * 1000;
 
-void rtc_pcf8563::create()
+void                rtc_pcf8563::create()
 {
 }
 
@@ -23,14 +27,115 @@ void rtc_pcf8563::destory()
 {
 }
 
+// 解析时间字符串并设置到PCF8563
+bool rtc_pcf8563::parse_and_set_time(String& time_buf)
+{
+    // 时间格式: "YYYY-MM-DD HH:MM:SS"
+    int  year, month, day, hour, minute, second;
+    char separator1, separator2, separator3, separator4;
+
+    int  parsed = sscanf(time_buf.c_str(), "%d%c%d%c%d %d%c%d%c%d",
+                         &year, &separator1,
+                         &month, &separator2,
+                         &day,
+                         &hour, &separator3,
+                         &minute, &separator4,
+                         &second);
+
+    if (parsed != 10)
+    {
+        return false;
+    }
+
+    // 检查分隔符
+    if (separator1 != '-' || separator2 != '-' ||
+        separator3 != ':' || separator4 != ':')
+    {
+        return false;
+    }
+
+    // 设置时间到PCF8563
+    if (_pcf_detected)
+    {
+        Println("设置时间到PCF8563: %d-%d-%d %d:%d:%d", year, month, day, hour, minute, second);
+        _rtc.setDateTime(year, month, day, hour, minute, second);
+        return true;
+    }
+
+    return false;
+}
+
+void rtc_pcf8563::check_time_sync()
+{
+    if (millis() - _last_sync_millis >= SYNC_INTERVAL)
+    {
+        sync_time_from_ntp();
+    }
+}
+
+bool rtc_pcf8563::sync_time_from_ntp()
+{
+    if (!WiFi.isConnected())
+    {
+        return false;
+    }
+
+    timeClient.forceUpdate();
+
+
+
+    if (timeClient.getEpochTime() > 1600000000)
+    {  // 检查是否获取到有效时间
+        time_t     epochTime = timeClient.getEpochTime();
+        struct tm* timeinfo  = localtime(&epochTime);
+
+        // 更新PCF8563
+        if (_pcf_detected)
+        {
+            int year, month, day, hour, minute, second;
+            year   = timeinfo->tm_year + 1900;  // 年
+            month  = timeinfo->tm_mon + 1;      // 月
+            day    = timeinfo->tm_mday;         // 日
+            hour   = timeinfo->tm_hour;         // 时
+            minute = timeinfo->tm_min;          // 分
+            second = timeinfo->tm_sec;          // 秒
+            Println("设置时间到PCF8563: %d-%d-%d %d:%d:%d", year, month, day, hour, minute, second);
+            _rtc.setDateTime(year, month, day, hour, minute, second);
+
+            // 同步系统时间到RTC
+            _rtc.syncToRtc();
+        }
+
+        // 更新状态信息
+        _last_sync_time = String(timeinfo->tm_year + 1900) + "-" +
+                          (timeinfo->tm_mon + 1 < 10 ? "0" : "") + String(timeinfo->tm_mon + 1) + "-" +
+                          (timeinfo->tm_mday < 10 ? "0" : "") + String(timeinfo->tm_mday) + " " +
+                          (timeinfo->tm_hour < 10 ? "0" : "") + String(timeinfo->tm_hour) + ":" +
+                          (timeinfo->tm_min < 10 ? "0" : "") + String(timeinfo->tm_min);
+
+        return true;
+    }
+    return false;
+}
+
 void rtc_pcf8563::begin(ESP8266WebServer& server)
 {
     // 初始化NTP客户端
-    timeClient.setPoolServerName(ntpServer.c_str());
+    if (!config::getInstance()._config.has_rtc_config)
+    {
+        config::getInstance()._config.has_rtc_config             = true;
+        char ntp_server[]                                        = "ntp.aliyun.com";
+        config::getInstance()._config.rtc_config.ntp_server.size = sizeof(ntp_server);
+        memcpy(config::getInstance()._config.rtc_config.ntp_server.bytes, ntp_server, config::getInstance()._config.rtc_config.ntp_server.size);
+        config::getInstance()._config.rtc_config.timezone = 8;
+        config::getInstance().save();
+    }
+    timeClient.setTimeOffset(config::getInstance()._config.rtc_config.timezone * 3600);
+    timeClient.setPoolServerName(reinterpret_cast<const char*>(config::getInstance()._config.rtc_config.ntp_server.bytes));
     timeClient.begin();
 
     // 初始化PCF8563 - 使用Wire库，默认地址0x51
-    _pcf_detected = (rtc_pcf8563.begin() == 0);
+    _pcf_detected = (_rtc.begin() == 0);
     if (!_pcf_detected)
     {
         Serial.println("未检测到PCF8563模块!");
@@ -39,58 +144,52 @@ void rtc_pcf8563::begin(ESP8266WebServer& server)
     {
         Serial.println("PCF8563模块初始化成功");
         // 检查电池电压低标志
-        if (rtc_pcf8563.status2() & PCF8563_VOL_LOW_MASK)
+        if (_rtc.status2() & PCF8563_VOL_LOW_MASK)
         {
             Serial.println("警告: PCF8563电池电压低，可能无法保持时间");
+            sync_time_from_ntp();
         }
     }
 
-    server.on("/time-info", HTTP_GET, [&]() {
-        // 创建JSON响应
-        JsonDocument doc;
-
-        // 获取当前时间
-        if (_pcf_detected && rtc_pcf8563.isVaild())
+    server.on("/pcf8563-time-info", HTTP_GET, [&]() {
+        String json = "{\"time\":\"";
+        if (_pcf_detected)
         {
-            RTC_Date now = rtc_pcf8563.getDateTime();
-            doc["time"]  = String(now.hour) + ":" +
-                          (now.minute < 10 ? "0" : "") + String(now.minute) + ":" +
-                          (now.second < 10 ? "0" : "") + String(now.second);
+            RTC_Date now = _rtc.getDateTime();
 
-            doc["date"] = String(now.year) + "年" +
-                          String(now.month) + "月" +
-                          String(now.day) + "日 " +
-                          getWeekday(rtc_pcf8563.getDayOfWeek(now.day, now.month, now.year));
+            json += String(now.year);
+            json += "-";
+            json += String(now.month);
+            json += "-";
+            json += String(now.day);
+            json += " ";
+            json += String(now.hour);
+            json += ":";
+            json += String(now.minute);
+            json += ":";
+            json += String(now.second);
         }
         else
         {
-            time_t     epochTime = timeClient.getEpochTime() + timezoneOffset * 3600;
-            struct tm* timeinfo;
-            timeinfo    = localtime(&epochTime);
-
-            doc["time"] = String(timeinfo->tm_hour) + ":" +
-                          (timeinfo->tm_min < 10 ? "0" : "") + String(timeinfo->tm_min) + ":" +
-                          (timeinfo->tm_sec < 10 ? "0" : "") + String(timeinfo->tm_sec);
-
-            doc["date"] = String(timeinfo->tm_year + 1900) + "年" +
-                          String(timeinfo->tm_mon + 1) + "月" +
-                          String(timeinfo->tm_mday) + "日 " +
-                          getWeekday(timeinfo->tm_wday);
+            json += "1900-00-00 00:00:00";
         }
 
-        doc["source"]      = timeSource;
-        doc["status"]      = timeStatus;
-        doc["pcfDetected"] = _pcf_detected;
-        doc["lastSync"]    = lastSyncTime;
-        doc["ntpServer"]   = ntpServer;
-        doc["timezone"]    = timezoneOffset;
+        json += "\",\"source\":";
+        json += _time_synced;
+        json += ",\"status\":true,\"pcfDetected\":";
+        json += _pcf_detected;
+        json += ",\"lastSync\":\"";
+        json += _last_sync_time;
+        json += "\",\"ntpServer\":\"";
+        json += reinterpret_cast<const char *>(config::getInstance()._config.rtc_config.ntp_server.bytes);
+        json += "\",\"timezone\":";
+        json += config::getInstance()._config.rtc_config.timezone;
+        json += "}";
 
-        // 发送JSON响应
-        String jsonResponse;
-        serializeJson(doc, jsonResponse);
-        server.send(200, "application/json", jsonResponse);
+        server.send(200, "application/json", json);
     });
-    server.on("/sync-ntp", HTTP_POST, [&]() {
+
+    server.on("/pcf8563-sync-ntp", HTTP_POST, [&]() {
         JsonDocument         doc;
         DeserializationError error = deserializeJson(doc, server.arg("plain"));
 
@@ -103,116 +202,62 @@ void rtc_pcf8563::begin(ESP8266WebServer& server)
         // 更新NTP服务器和时区
         if (doc.containsKey("ntpServer"))
         {
-            ntpServer = doc["ntpServer"].as<String>();
-            timeClient.setPoolServerName(ntpServer.c_str());
+            String ntp_server                                        = doc["ntpServer"].as<String>();
+            config::getInstance()._config.rtc_config.ntp_server.size = ntp_server.length();
+            memcpy(config::getInstance()._config.rtc_config.ntp_server.bytes, ntp_server.c_str(), config::getInstance()._config.rtc_config.ntp_server.size);
         }
 
         if (doc.containsKey("timezone"))
         {
-            timezoneOffset = doc["timezone"].as<float>();
+            config::getInstance()._config.rtc_config.timezone = doc["timezone"].as<float>();
+            timeClient.setTimeOffset(config::getInstance()._config.rtc_config.timezone * 3600);
         }
 
         // 同步NTP时间
-        timeStatus     = "syncing";
-        timeSource     = "同步中...";
-
-        bool   success = false;
-        String message = "NTP同步失败";
-
-        // 强制更新NTP时间
-        timeClient.forceUpdate();
-
-        if (timeClient.getEpochTime() > 1600000000)
-        {  // 检查是否获取到有效时间
-            time_t     epochTime = timeClient.getEpochTime() + timezoneOffset * 3600;
-            struct tm* timeinfo  = localtime(&epochTime);
-
-            // 更新PCF8563
-            if (_pcf_detected)
-            {
-                // 使用库提供的setDateTime方法设置时间
-                rtc_pcf8563.setDateTime(
-                    timeinfo->tm_year + 1900,  // 年
-                    timeinfo->tm_mon + 1,      // 月
-                    timeinfo->tm_mday,         // 日
-                    timeinfo->tm_hour,         // 时
-                    timeinfo->tm_min,          // 分
-                    timeinfo->tm_sec           // 秒
-                );
-
-                // 同步系统时间到RTC
-                rtc_pcf8563.syncToRtc();
-            }
-
-            // 更新状态信息
-            lastSyncTime = String(timeinfo->tm_year + 1900) + "-" +
-                           (timeinfo->tm_mon + 1 < 10 ? "0" : "") + String(timeinfo->tm_mon + 1) + "-" +
-                           (timeinfo->tm_mday < 10 ? "0" : "") + String(timeinfo->tm_mday) + " " +
-                           (timeinfo->tm_hour < 10 ? "0" : "") + String(timeinfo->tm_hour) + ":" +
-                           (timeinfo->tm_min < 10 ? "0" : "") + String(timeinfo->tm_min);
-
-            timeSource = "NTP服务器";
-            timeStatus = "synced";
-            success    = true;
-            message    = "NTP同步成功";
-        }
-
-        server.send(200, "application/json", "{\"success\": " + String(success ? "true" : "false") + ", \"message\": \"" + message + "\"}");
+        bool   success = sync_time_from_ntp();
+        String json    = "{\"status\": ";
+        json += success ? "true" : "false";
+        json += "}";
+        server.send(200, "application/json", json);
     });
-    server.on("/sync-browser", HTTP_POST, [&]() {
-        JsonDocument         doc;
-        DeserializationError error = deserializeJson(doc, server.arg("plain"));
 
+    server.on("/pcf8563-sync-browser", HTTP_POST, [&]() {
+        JsonDocument         doc;
+
+        // 解析请求体
+        DeserializationError error = deserializeJson(doc, server.arg("plain"));
         if (error)
         {
             server.send(400, "application/json", "{\"success\": false, \"message\": \"无效的请求数据\"}");
             return;
         }
 
-        // 提取时间数据
-        int year       = doc["year"];
-        int month      = doc["month"];
-        int day        = doc["day"];
-        int hour       = doc["hour"];
-        int minute     = doc["minute"];
-        int second     = doc["second"];
-        timezoneOffset = doc["timezone"];
+        String timeStr                                    = doc["time"];
+        config::getInstance()._config.rtc_config.timezone = doc["timezone"];
 
-        // 更新PCF8563
-        bool   success = false;
-        String message = "时间同步失败";
+        timeClient.setTimeOffset(config::getInstance()._config.rtc_config.timezone * 3600);
 
-        if (_pcf_detected)
+        bool success = false;
+
+        if (_pcf_detected && parse_and_set_time(timeStr))
         {
-            // 使用库的RTC_Date结构设置时间
-            RTC_Date newDate(year, month, day, hour, minute, second);
-            rtc_pcf8563.setDateTime(newDate);
-            rtc_pcf8563.syncToRtc();
-
-            // 更新状态信息
-            lastSyncTime = String(year) + "-" +
-                           (month < 10 ? "0" : "") + String(month) + "-" +
-                           (day < 10 ? "0" : "") + String(day) + " " +
-                           (hour < 10 ? "0" : "") + String(hour) + ":" +
-                           (minute < 10 ? "0" : "") + String(minute);
-
-            timeSource = "浏览器时间";
-            timeStatus = "synced";
-            success    = true;
-            message    = "时间同步成功";
+            success           = true;
+            _time_synced      = true;
+            _last_sync_time   = timeStr;
+            _last_sync_millis = millis();
         }
 
-        server.send(200, "application/json", "{\"success\": " + String(success ? "true" : "false") + ", \"message\": \"" + message + "\"}");
-    });
+        String json = "{\"status\": ";
+        json += success ? "true" : "false";
+        json += "}";
 
-    // 启动服务器
-    server.begin();
-    Serial.println("服务器启动成功");
+        server.send(200, "application/json", json);
+    });
 }
 
 void rtc_pcf8563::update()
 {
-    //timeClient.update();
+    check_time_sync();
 }
 }  // namespace esp_utility
-//#endif // ENABLE_RTC_PCF8563
+// #endif // ENABLE_RTC_PCF8563

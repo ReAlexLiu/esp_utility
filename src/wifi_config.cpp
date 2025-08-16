@@ -14,7 +14,7 @@
 #define WIFI_AP_PASSWD "liuqingquan"
 namespace esp_utility
 {
-void       wifi_config::create()
+void wifi_config::create()
 {
 }
 
@@ -31,11 +31,11 @@ bool wifi_config::try_connect()
         ElapsedTimer _esp;
         _esp.start();
 
-        Println("wifi ssid: %s", config::getInstance()._config.wifi_config.ssid);
-        Println("wifi passphrase: %s", config::getInstance()._config.wifi_config.passphrase);
+        Println("wifi ssid: %s", reinterpret_cast<char *>(config::getInstance()._config.wifi_config.ssid.bytes));
+        Println("wifi passphrase: %s", reinterpret_cast<char *>(config::getInstance()._config.wifi_config.passphrase.bytes));
         // 连接WiFi
-        WiFi.begin(config::getInstance()._config.wifi_config.ssid,
-                   config::getInstance()._config.wifi_config.passphrase);
+        WiFi.begin(reinterpret_cast<const char *>(config::getInstance()._config.wifi_config.ssid.bytes),
+                   reinterpret_cast<const char *>(config::getInstance()._config.wifi_config.passphrase.bytes));
 
         // 等待连接，超时则进入AP模式
         while (WiFi.status() != WL_CONNECTED && (!_esp.hasExpired(WIFI_CONNECT_TIMEOUT)))
@@ -153,7 +153,7 @@ void wifi_config::begin(ESP8266WebServer& server)
 
         // 解析请求体
         String               requestBody = server.arg("plain");
-        JsonDocument  doc;
+        JsonDocument         doc;
         DeserializationError error = deserializeJson(doc, requestBody);
 
         if (error)
@@ -173,13 +173,16 @@ void wifi_config::begin(ESP8266WebServer& server)
         }
 
         // 保存配置
-        config::getInstance()._config.has_wifi_config = true;
-        memcpy(config::getInstance()._config.wifi_config.ssid,ssid.c_str(), ssid.length());
-        memcpy(config::getInstance()._config.wifi_config.passphrase, password.c_str(), password.length());
+        config::getInstance()._config.has_wifi_config       = true;
+        config::getInstance()._config.wifi_config.ssid.size = ssid.length();
+        memcpy(config::getInstance()._config.wifi_config.ssid.bytes, ssid.c_str(), config::getInstance()._config.wifi_config.ssid.size);
+        config::getInstance()._config.wifi_config.passphrase.size = password.length();
+        memcpy(config::getInstance()._config.wifi_config.passphrase.bytes, password.c_str(), config::getInstance()._config.wifi_config.passphrase.size);
 
         if (config::getInstance().save())
         {
-            WiFi.begin(config::getInstance()._config.wifi_config.ssid, config::getInstance()._config.wifi_config.passphrase);
+            WiFi.begin(reinterpret_cast<const char *>(config::getInstance()._config.wifi_config.ssid.bytes),
+           reinterpret_cast<const char *>(config::getInstance()._config.wifi_config.passphrase.bytes));
             server.send(200, "application/json", "{\"status\":\"connecting\"}");
         }
         else
@@ -201,31 +204,30 @@ void wifi_config::begin(ESP8266WebServer& server)
     server.on("/wifi-device-info", [&]() {
         // 处理设备信息请求
         String json;
-        json+="{\"name\":\"ESP-config\",\"mac\":\"";
-        json+=WiFi.macAddress();
-        json+="\",\"version\":\"1.0.1\",\"connected\":";
-        json+=(WiFi.status() == WL_CONNECTED);
-        json+=",\"mode\":\"";
+        json += "{\"name\":\"ESP-config\",\"mac\":\"";
+        json += WiFi.macAddress();
+        json += "\",\"version\":\"1.0.1\",\"connected\":";
+        json += (WiFi.status() == WL_CONNECTED);
+        json += ",\"mode\":\"";
         switch (WiFi.getMode())
         {
         case WIFI_OFF:
-            json+="WIFI_OFF";
+            json += "WIFI_OFF";
             break;
 
         case WIFI_STA:
-            json+="WIFI_STA";
+            json += "WIFI_STA";
             break;
 
-        case WIFI_AP :
-            json+="WIFI_AP";
+        case WIFI_AP:
+            json += "WIFI_AP";
             break;
 
         case WIFI_AP_STA:
-            json+="WIFI_AP_STA";
+            json += "WIFI_AP_STA";
             break;
-
         }
-        json+="\"}";
+        json += "\"}";
 
         server.send(200, "application/json", json);
     });
@@ -257,4 +259,4 @@ void wifi_config::update()
     }
 }
 }
-#endif // ENABLE_WIFI
+#endif  // ENABLE_WIFI
